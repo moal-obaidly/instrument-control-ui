@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from collections import deque
 
 # Settings
-broker_ip = "192.168.1.4"  
+broker_ip = "192.168.1.36"  
 topic = "experiment/data"
 
 # Signal buffer

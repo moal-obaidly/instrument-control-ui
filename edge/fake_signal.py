@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import paho.mqtt.client as mqtt
 #MQTT setup
-broker_ip = "192.168.1.4" 
+broker_ip = "192.168.1.36" 
 port = 1883
 topic = "experiment/data"
 
@@ -16,7 +16,7 @@ for value in signal:
     client.publish(topic, str(value))
     print("Sent:", value)
     time.sleep(0.001)  # simulate 1 kHz sample rate
-    
+
 plt.plot(t, signal)
 plt.title("Sine Wave")
 plt.xlabel("Time (s)")
