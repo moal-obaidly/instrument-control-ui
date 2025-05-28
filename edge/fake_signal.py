@@ -12,11 +12,11 @@ client.connect(broker_ip, port, 60)
 
 t = np.linspace(0, 1, 1000)
 signal = np.sin(2 * np.pi * 10 * t)
-
-for value in signal:
-    client.publish(topic, str(value))
-    print("Sent:", value)
-    time.sleep(0.001)  # simulate 1 kHz sample rate
+while True:
+    for value in signal:
+        client.publish(topic, str(value))
+        print("Sent:", value)
+        time.sleep(0.001)  # simulate 1 kHz sample rate
 
 plt.plot(t, signal)
 plt.title("Sine Wave")
