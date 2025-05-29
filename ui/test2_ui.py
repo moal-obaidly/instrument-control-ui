@@ -104,6 +104,7 @@ class MainWindow(QWidget):
 
     def on_slider_change(self, value):
         self.slider_label.setText(f"Slider Value: {value}")
+        self.mqtt_client.client.publish("experiment/slider", value)
 
     def start_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "1")
