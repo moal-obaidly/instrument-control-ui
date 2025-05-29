@@ -70,12 +70,17 @@ class MainWindow(QWidget):
 
         self.slider_label = QtWidgets.QLabel("Slider Value: 50")
 
+        self.last_values_label = QtWidgets.QLabel("Last 5 Values:\n")
+        
+
         # Layout setup
         main_layout.addWidget(self.plot_widget)
         control_layout.addWidget(self.reset_btn)
         control_layout.addWidget(self.slider_label)
         control_layout.addWidget(self.slider)
+        
         main_layout.addLayout(control_layout)
+        main_layout.addWidget(self.last_values_label)
         experiment_layout.addWidget(self.start_button)
         experiment_layout.addWidget(self.stop_button)
         main_layout.addLayout(experiment_layout)
@@ -85,8 +90,14 @@ class MainWindow(QWidget):
         self.timer.timeout.connect(self.update_plot)
         self.timer.start(50)
 
+    def update_last_values_display(self):
+        recent_values = self.mqtt_client.data[-5:]
+        text = "\n".join([f"{v:.4f}" for v in recent_values])
+        self.last_values_label.setText(f"Last 5 Values:\n{text}")
+
     def update_plot(self):
         self.curve.setData(self.mqtt_client.data)
+        self.update_last_values_display()
 
     def reset_graph(self):
         self.mqtt_client.data = []
