@@ -3,7 +3,7 @@ import paho.mqtt.client as mqtt
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, QtCore
 
-
+app = QtWidgets.QApplication([])
 # MQTT Configuration
 broker_ip = "192.168.1.36"
 topic = "experiment/data"
@@ -106,7 +106,7 @@ class MainWindow(QtWidgets.QWidget):
 
 
 # Run the App
-app = QtWidgets.QApplication([])
+
 window = MainWindow()
 window.show()
 sys.exit(app.exec_())
