@@ -1,12 +1,8 @@
 import sys
 import paho.mqtt.client as mqtt
-import pyqtgraph as pg
-from PyQt5 import QtWidgets, QtCore
 
-app = QtWidgets.QApplication([])
-# MQTT Configuration
-broker_ip = "192.168.1.36"
-topic = "experiment/data"
+from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5 import QtWidgets, QtCore
 
 # MQTT Client Setup
 class MQTTClient:
@@ -17,8 +13,8 @@ class MQTTClient:
         self.data = []
 
     def on_connect(self, client, userdata, flags, rc):
-        print("Connected with result code " + str(rc))
-        client.subscribe(topic)
+        print("Connected with result code", rc)
+        client.subscribe("experiment/data")
 
     def on_message(self, client, userdata, msg):
         try:
@@ -26,24 +22,25 @@ class MQTTClient:
             self.data.append(value)
             if len(self.data) > 1000:
                 self.data.pop(0)
-        except:
-            print("Bad message:", msg.payload)
+        except Exception as e:
+            print("Bad message:", msg.payload, "| Error:", e)
 
     def start(self):
-        self.client.connect(broker_ip, 1883, 60)
+        self.client.connect("192.168.1.36", 1883, 60)
         self.client.loop_start()
 
 
-# Create MQTT client instance
-mqtt_client = MQTTClient()
-mqtt_client.start()
-
 # PyQt GUI
-class MainWindow(QtWidgets.QWidget):
+class MainWindow(QWidget):
     def __init__(self):
+        import pyqtgraph as pg
         super().__init__()
         self.setWindowTitle("Signal Monitor")
         self.resize(900, 600)
+
+        # MQTT
+        self.mqtt_client = MQTTClient()
+        self.mqtt_client.start()
 
         # Layouts
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -83,30 +80,34 @@ class MainWindow(QtWidgets.QWidget):
         experiment_layout.addWidget(self.stop_button)
         main_layout.addLayout(experiment_layout)
 
-
         # Timer to update plot
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot)
         self.timer.start(50)
 
     def update_plot(self):
-        self.curve.setData(mqtt_client.data)
+        self.curve.setData(self.mqtt_client.data)
 
     def reset_graph(self):
-        mqtt_client.data = []
+        self.mqtt_client.data = []
 
     def on_slider_change(self, value):
         self.slider_label.setText(f"Slider Value: {value}")
-        # You can use this value to send commands later
-    def start_experiment():
-       mqtt_client.publish("experiment/control", "1")
-    def stop_experiment():
-        mqtt_client.publish("experiment/control", "0")
+
+    def start_experiment(self):
+        self.mqtt_client.client.publish("experiment/control", "1")
+
+    def stop_experiment(self):
+        self.mqtt_client.client.publish("experiment/control", "0")
+
+app = QApplication(sys.argv)
+# Main app
+def main():
+    
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
 
 
-
-# Run the App
-
-window = MainWindow()
-window.show()
-sys.exit(app.exec_())
+if __name__ == "__main__":
+    main()
