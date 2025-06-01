@@ -3,6 +3,11 @@ import paho.mqtt.client as mqtt
 
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtWidgets, QtCore
+from datetime import datetime
+
+
+#globals
+record = 0
 
 # MQTT Client Setup
 class MQTTClient:
@@ -20,6 +25,12 @@ class MQTTClient:
         try:
             value = float(msg.payload.decode())
             self.data.append(value)
+
+            if record == 1:
+                with open("signal.csv", "a") as f:
+                    timestamp = datetime.now().isoformat() # gets the current date and time
+                    f.write(f"{timestamp},{value}\n")
+
             if len(self.data) > 1000:
                 self.data.pop(0)
         except Exception as e:
@@ -33,6 +44,7 @@ class MQTTClient:
 # PyQt GUI
 class MainWindow(QWidget):
     def __init__(self):
+        global record
         import pyqtgraph as pg
         super().__init__()
         self.setWindowTitle("Signal Monitor")
@@ -49,6 +61,7 @@ class MainWindow(QWidget):
         experiment_layout = QtWidgets.QHBoxLayout()
         rate_layout = QtWidgets.QVBoxLayout()
         sampling_layout = QtWidgets.QVBoxLayout()
+        record_layout = QtWidgets.QHBoxLayout()
 
         # Plot
         self.plot_widget = pg.PlotWidget(title="Live Signal")
@@ -73,6 +86,11 @@ class MainWindow(QWidget):
         self.high_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 10000 Hz")
         self.high_sample_rate_btn.clicked.connect(self.high_sample_rate)
 
+        self.start_record_btn = QtWidgets.QPushButton("Start recording data")
+        self.start_record_btn.clicked.connect(self.start_record)
+        self.stop_record_btn = QtWidgets.QPushButton("Stop recording data")
+        self.stop_record_btn.clicked.connect(self.stop_record)
+
         
 
         # Slider
@@ -82,9 +100,18 @@ class MainWindow(QWidget):
         self.slider.setValue(50)
         self.slider.valueChanged.connect(self.on_slider_change)
 
+        # Labels
+
         self.slider_label = QtWidgets.QLabel("Slider Value: 50")
 
         self.last_values_label = QtWidgets.QLabel("Last 5 Values:\n")
+
+        if record == 1:
+            self.recording_label = QtWidgets.QLabel("Recording")
+        elif record == 0:
+            self.recording_label = QtWidgets.QLabel("Not recording")
+
+        
 
          # Slider for sampling rate
         self.rate_slider = QtWidgets.QSlider(QtCore.Qt.Vertical)
@@ -120,6 +147,11 @@ class MainWindow(QWidget):
         sampling_layout.addWidget(self.rate_slider_label)
         sampling_layout.addWidget(self.rate_slider)
         horizontal_main_layout.addLayout(sampling_layout)
+
+        record_layout.addWidget(self.start_record_btn)
+        record_layout.addWidget(self.stop_record_btn)
+        record_layout.addWidget(self.recording_label)
+        main_layout.addLayout(record_layout)
         
 
         # Timer to update plot
@@ -161,6 +193,17 @@ class MainWindow(QWidget):
 
     def high_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "10000")
+    
+    def start_record(self): 
+        global record
+        record = 1
+        self.recording_label.setText("Recording")
+
+    def stop_record(self): 
+        global record
+        record = 0
+        self.recording_label.setText("Stopped Recording")
+    
         
 
 app = QApplication(sys.argv)
