@@ -43,9 +43,12 @@ class MainWindow(QWidget):
         self.mqtt_client.start()
 
         # Layouts
+        horizontal_main_layout = QtWidgets.QHBoxLayout(self)
         main_layout = QtWidgets.QVBoxLayout(self)
         control_layout = QtWidgets.QHBoxLayout()
         experiment_layout = QtWidgets.QHBoxLayout()
+        rate_layout = QtWidgets.QVBoxLayout()
+        sampling_layout = QtWidgets.QVBoxLayout()
 
         # Plot
         self.plot_widget = pg.PlotWidget(title="Live Signal")
@@ -61,6 +64,17 @@ class MainWindow(QWidget):
         self.stop_button = QtWidgets.QPushButton("Stop Experiment")
         self.stop_button.clicked.connect(self.stop_experiment)
 
+        self.low_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 100 Hz")
+        self.low_sample_rate_btn.clicked.connect(self.low_sample_rate)
+
+        self.med_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 1000 Hz")
+        self.med_sample_rate_btn.clicked.connect(self.med_sample_rate)
+
+        self.high_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 10000 Hz")
+        self.high_sample_rate_btn.clicked.connect(self.high_sample_rate)
+
+        
+
         # Slider
         self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.slider.setMinimum(0)
@@ -71,19 +85,42 @@ class MainWindow(QWidget):
         self.slider_label = QtWidgets.QLabel("Slider Value: 50")
 
         self.last_values_label = QtWidgets.QLabel("Last 5 Values:\n")
+
+         # Slider for sampling rate
+        self.rate_slider = QtWidgets.QSlider(QtCore.Qt.Vertical)
+        self.rate_slider.setMinimum(1)
+        self.rate_slider.setMaximum(10000)
+        self.rate_slider.setValue(100)
+        self.rate_slider.valueChanged.connect(self.on_rate_slider_change)
+        self.rate_slider_label = QtWidgets.QLabel("Sampling rate: 100 Hz")
+
+        
         
 
         # Layout setup
         main_layout.addWidget(self.plot_widget)
+
         control_layout.addWidget(self.reset_btn)
         control_layout.addWidget(self.slider_label)
         control_layout.addWidget(self.slider)
         
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.last_values_label)
+
         experiment_layout.addWidget(self.start_button)
         experiment_layout.addWidget(self.stop_button)
         main_layout.addLayout(experiment_layout)
+
+        rate_layout.addWidget(self.low_sample_rate_btn)
+        rate_layout.addWidget(self.med_sample_rate_btn)
+        rate_layout.addWidget(self.high_sample_rate_btn)
+        horizontal_main_layout.addLayout(main_layout)
+        horizontal_main_layout.addLayout(rate_layout)
+
+        sampling_layout.addWidget(self.rate_slider_label)
+        sampling_layout.addWidget(self.rate_slider)
+        horizontal_main_layout.addLayout(sampling_layout)
+        
 
         # Timer to update plot
         self.timer = QtCore.QTimer()
@@ -105,12 +142,26 @@ class MainWindow(QWidget):
     def on_slider_change(self, value):
         self.slider_label.setText(f"Slider Value: {value}")
         self.mqtt_client.client.publish("experiment/slider", value)
+    
+    def on_rate_slider_change(self, value):
+        self.rate_slider_label.setText(f"Sampling rate: {value} Hz")
+        self.mqtt_client.client.publish("experiment/rateslider", value)
 
     def start_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "1")
 
     def stop_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "0")
+# Different possible simulated sampling rates
+    def low_sample_rate(self):
+        self.mqtt_client.client.publish("experiment/rate", "100")
+
+    def med_sample_rate(self):
+        self.mqtt_client.client.publish("experiment/rate", "1000")
+
+    def high_sample_rate(self):
+        self.mqtt_client.client.publish("experiment/rate", "10000")
+        
 
 app = QApplication(sys.argv)
 # Main app
