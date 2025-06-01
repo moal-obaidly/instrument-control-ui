@@ -78,6 +78,6 @@ client.on_message = on_message
 client.connect(broker, port, 60)
 client.loop_start()
 
-# Keep main thread alive
+# Keep main thread ALIVE
 while True:
     time.sleep(1)
