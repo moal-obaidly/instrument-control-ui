@@ -9,7 +9,7 @@ broker = "192.168.1.36"
 port = 1883
 topic = "experiment/data"
 
-# Globals
+# Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
 freq = 10
@@ -24,7 +24,7 @@ def start_signal():
         for value in signal:
             if not running:
                 break
-            client.publish(topic, str(value))
+            client.publish(topic,time.time(), str(value))
             print("Sent:", value)
             time.sleep(1/rate)
             print("rate:", 1/rate)
