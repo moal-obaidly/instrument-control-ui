@@ -1,6 +1,6 @@
 import sys
 import paho.mqtt.client as mqtt
-
+import time
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtWidgets, QtCore
 from datetime import datetime
@@ -8,6 +8,7 @@ from datetime import datetime
 
 #globals
 record = 0
+csv_status = 1
 
 # MQTT Client Setup
 class MQTTClient:
@@ -22,14 +23,29 @@ class MQTTClient:
         client.subscribe("experiment/data")
 
     def on_message(self, client, userdata, msg):
+        global csv_status
         try:
-            value = float(msg.payload.decode())
+            payload = msg.payload.decode()
+            sent_time_str, value_str = payload.split(",")
+            sent_time = float(sent_time_str)
+            value = float(value_str)
+
             self.data.append(value)
 
+            latency = (time.time() - sent_time) * 1000
+            print(f"Latency: {latency:.2f} ms")
+
             if record == 1:
-                with open("signal.csv", "a") as f:
-                    timestamp = datetime.now().isoformat() # gets the current date and time
-                    f.write(f"{timestamp},{value}\n")
+                try:
+                    with open("signal.csv", "a") as f:
+                        csv_status = 1
+                        timestamp = datetime.now().isoformat() # gets the current date and time
+                        f.write(f"{timestamp},{value}\n")
+                        
+                except IOError:
+                    print("Could not write to CSV. Please close CSV file and try again")
+                    csv_status = 0
+
 
             if len(self.data) > 1000:
                 self.data.pop(0)
@@ -106,10 +122,7 @@ class MainWindow(QWidget):
 
         self.last_values_label = QtWidgets.QLabel("Last 5 Values:\n")
 
-        if record == 1:
-            self.recording_label = QtWidgets.QLabel("Recording")
-        elif record == 0:
-            self.recording_label = QtWidgets.QLabel("Not recording")
+        self.recording_label = QtWidgets.QLabel("Not recording")
 
         
 
@@ -195,9 +208,12 @@ class MainWindow(QWidget):
         self.mqtt_client.client.publish("experiment/rate", "10000")
     
     def start_record(self): 
-        global record
+        global record, csv_status
         record = 1
-        self.recording_label.setText("Recording")
+        if csv_status == 1:
+            self.recording_label.setText("Recording")
+        else:
+            self.recording_label.setText("Failed to record")
 
     def stop_record(self): 
         global record
