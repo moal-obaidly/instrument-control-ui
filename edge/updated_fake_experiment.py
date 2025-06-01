@@ -24,7 +24,7 @@ def start_signal():
         for value in signal:
             if not running:
                 break
-            client.publish(topic,time.time(), str(value))
+            client.publish(topic, f"{time.time()},{value}")
             print("Sent:", value)
             time.sleep(1/rate)
             print("rate:", 1/rate)
