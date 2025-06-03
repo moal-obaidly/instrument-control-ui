@@ -77,6 +77,7 @@ class MainWindow(QWidget):
         experiment_layout = QtWidgets.QHBoxLayout()
         rate_layout = QtWidgets.QVBoxLayout()
         sampling_layout = QtWidgets.QVBoxLayout()
+        switch_layout =  QtWidgets.QVBoxLayout()
         record_layout = QtWidgets.QHBoxLayout()
 
         # Plot
@@ -107,6 +108,9 @@ class MainWindow(QWidget):
         self.stop_record_btn = QtWidgets.QPushButton("Stop recording data")
         self.stop_record_btn.clicked.connect(self.stop_record)
 
+        self.toggle_layout_btn = QtWidgets.QPushButton("Switch Layout")
+        self.toggle_layout_btn.clicked.connect(self.toggle_layout)
+
         
 
         # Slider
@@ -133,6 +137,19 @@ class MainWindow(QWidget):
         self.rate_slider.setValue(100)
         self.rate_slider.valueChanged.connect(self.on_rate_slider_change)
         self.rate_slider_label = QtWidgets.QLabel("Sampling rate: 100 Hz")
+        
+        
+
+        # Toggle between slider and button selection for the rate
+        self.layout_stack = QtWidgets.QStackedLayout()
+        rate_widget = QtWidgets.QWidget()
+        rate_widget.setLayout(rate_layout)
+
+        sampling_widget = QtWidgets.QWidget()
+        sampling_widget.setLayout(sampling_layout)
+
+        self.layout_stack.addWidget(rate_widget)    
+        self.layout_stack.addWidget(sampling_widget)
 
         
         
@@ -143,6 +160,7 @@ class MainWindow(QWidget):
         control_layout.addWidget(self.reset_btn)
         control_layout.addWidget(self.slider_label)
         control_layout.addWidget(self.slider)
+        
         
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.last_values_label)
@@ -155,11 +173,15 @@ class MainWindow(QWidget):
         rate_layout.addWidget(self.med_sample_rate_btn)
         rate_layout.addWidget(self.high_sample_rate_btn)
         horizontal_main_layout.addLayout(main_layout)
-        horizontal_main_layout.addLayout(rate_layout)
+        #horizontal_main_layout.addLayout(rate_layout)
 
         sampling_layout.addWidget(self.rate_slider_label)
         sampling_layout.addWidget(self.rate_slider)
-        horizontal_main_layout.addLayout(sampling_layout)
+        #horizontal_main_layout.addLayout(sampling_layout)
+        switch_layout.addWidget(self.toggle_layout_btn)
+        switch_layout.addLayout(self.layout_stack)
+        horizontal_main_layout.addLayout(switch_layout)
+
 
         record_layout.addWidget(self.start_record_btn)
         record_layout.addWidget(self.stop_record_btn)
@@ -219,6 +241,11 @@ class MainWindow(QWidget):
         global record
         record = 0
         self.recording_label.setText("Stopped Recording")
+
+    def toggle_layout(self):
+        index = self.layout_stack.currentIndex()
+        new_index = (index + 1) % self.layout_stack.count()
+        self.layout_stack.setCurrentIndex(new_index)
     
         
 
