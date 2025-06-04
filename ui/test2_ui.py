@@ -53,7 +53,7 @@ class MQTTClient:
             print("Bad message:", msg.payload, "| Error:", e)
 
     def start(self):
-        self.client.connect("192.168.1.36", 1883, 60)
+        self.client.connect("192.168.1.82", 1883, 60) #.36 for laptop, .82 for rpi4
         self.client.loop_start()
 
 

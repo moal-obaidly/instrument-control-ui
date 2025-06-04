@@ -5,7 +5,7 @@ import time
 import threading
 
 # MQTT setup
-broker = "192.168.1.36"
+broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
 port = 1883
 topic = "experiment/data"
 
