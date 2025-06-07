@@ -12,13 +12,24 @@ topic = "experiment/data"
 # Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
+rtt_thread = None
+
 freq = 10
 rate = 100
 
+def rtt():
+    while True:
+
+        client.publish("experiment/rtt",time.time())
+        time.sleep(5)
+
 def start_signal():
-    global running, freq
+    global running, freq, rtt_thread
     t = np.linspace(0, 1, 1000)
     running = True
+    if rtt_thread is None:
+        rtt_thread = threading.Thread(target = rtt, daemon=True)
+        rtt_thread.start()
     while running:
         signal = np.sin(2 * np.pi * freq * t)  # dynamically use current freq
         for value in signal:
@@ -26,7 +37,7 @@ def start_signal():
                 break
             client.publish(topic, f"{time.time()},{value}")
             #### Checking RTT
-            client.publish("experiment/rtt",time.time())
+            #client.publish("experiment/rtt",time.time())
             ####
             print("Sent:", value)
             time.sleep(1/rate)
