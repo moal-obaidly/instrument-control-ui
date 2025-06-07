@@ -25,6 +25,9 @@ def start_signal():
             if not running:
                 break
             client.publish(topic, f"{time.time()},{value}")
+            #### Checking RTT
+            client.publish("experiment/rtt",time.time())
+            ####
             print("Sent:", value)
             time.sleep(1/rate)
             print("rate:", 1/rate)
@@ -40,6 +43,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("experiment/slider")
     client.subscribe("experiment/rateslider")
     client.subscribe("experiment/rate")
+    client.subscribe("experiment/rtt/response")
 
 def on_message(client, userdata, msg):
     global signal_thread, freq,rate
@@ -70,6 +74,15 @@ def on_message(client, userdata, msg):
             print("Updated sampling rate to:", rate)
         except ValueError:
             print("Invalid sampling rate value:", command)
+
+    elif msg.topic == "experiment/rtt/response":
+        try:
+            orig_time = float(command)
+            rtt = (time.time() - orig_time) * 1000
+            print(f"RTT: {rtt:.2f} ms")
+        except ValueError:
+            print("Invalid time value:", command)
+        
 
 # MQTT client setup
 client = mqtt.Client()

@@ -21,36 +21,47 @@ class MQTTClient:
     def on_connect(self, client, userdata, flags, rc):
         print("Connected with result code", rc)
         client.subscribe("experiment/data")
+        client.subscribe("experiment/rtt")
 
     def on_message(self, client, userdata, msg):
         global csv_status
-        try:
-            payload = msg.payload.decode()
-            sent_time_str, value_str = payload.split(",")
-            sent_time = float(sent_time_str)
-            value = float(value_str)
+        if msg.topic == "experiment/data":
+            try:
+                payload = msg.payload.decode()
+                sent_time_str, value_str = payload.split(",")
+                sent_time = float(sent_time_str)
+                value = float(value_str)
 
-            self.data.append(value)
+                self.data.append(value)
 
-            latency = (time.time() - sent_time) * 1000
-            print(f"Latency: {latency:.2f} ms")
+                latency = (time.time() - sent_time) * 1000
+                print(f"Latency: {latency:.2f} ms")
 
-            if record == 1:
-                try:
-                    with open("signal.csv", "a") as f:
-                        csv_status = 1
-                        timestamp = datetime.now().isoformat() # gets the current date and time
-                        f.write(f"{timestamp},{value}\n")
-                        
-                except IOError:
-                    print("Could not write to CSV. Please close CSV file and try again")
-                    csv_status = 0
+                if record == 1:
+                    try:
+                        with open("signal.csv", "a") as f:
+                            csv_status = 1
+                            timestamp = datetime.now().isoformat() # gets the current date and time
+                            f.write(f"{timestamp},{value}\n")
+                            
+                    except IOError:
+                        print("Could not write to CSV. Please close CSV file and try again")
+                        csv_status = 0
 
 
-            if len(self.data) > 1000:
-                self.data.pop(0)
-        except Exception as e:
-            print("Bad message:", msg.payload, "| Error:", e)
+                if len(self.data) > 1000:
+                    self.data.pop(0)
+            except Exception as e:
+                print("Bad message:", msg.payload, "| Error:", e)
+        elif msg.topic == "experiment/rtt":
+            try:
+                payload = msg.payload.decode()
+                orig_time = float(payload)
+                client.publish("experiment/rtt/response",orig_time)
+
+            except Exception as e:
+                print("Bad message:", msg.payload, "| Error:", e)
+           
 
     def start(self):
         self.client.connect("192.168.1.82", 1883, 60) #.36 for laptop, .82 for rpi4
