@@ -10,6 +10,7 @@ from datetime import datetime
 record = 0
 csv_status = 1
 
+
 # MQTT Client Setup
 class MQTTClient:
     def __init__(self):
@@ -17,11 +18,14 @@ class MQTTClient:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.data = []
+        self.rtt = 0
+        
 
     def on_connect(self, client, userdata, flags, rc):
         print("Connected with result code", rc)
         client.subscribe("experiment/data")
         client.subscribe("experiment/rtt")
+        client.subscribe("experiment/rtt/display")
 
     def on_message(self, client, userdata, msg):
         global csv_status
@@ -58,6 +62,15 @@ class MQTTClient:
                 payload = msg.payload.decode()
                 orig_time = float(payload)
                 client.publish("experiment/rtt/response",orig_time)
+
+            except Exception as e:
+                print("Bad message:", msg.payload, "| Error:", e)
+        
+        elif msg.topic == "experiment/rtt/display":
+            try:
+                payload = msg.payload.decode()
+                self.rtt = float(payload)
+                
 
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
@@ -139,6 +152,8 @@ class MainWindow(QWidget):
 
         self.recording_label = QtWidgets.QLabel("Not recording")
 
+        self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms")
+
         
 
          # Slider for sampling rate
@@ -174,6 +189,7 @@ class MainWindow(QWidget):
         
         
         main_layout.addLayout(control_layout)
+        main_layout.addWidget(self.rtt_label)
         main_layout.addWidget(self.last_values_label)
 
         experiment_layout.addWidget(self.start_button)
@@ -213,6 +229,9 @@ class MainWindow(QWidget):
     def update_plot(self):
         self.curve.setData(self.mqtt_client.data)
         self.update_last_values_display()
+        self.rtt_label.setText(f"RTT:{self.mqtt_client.rtt:.2f}ms")
+        #print(f"Current RTT in GUI update: {self.mqtt_client.rtt}")
+
 
     def reset_graph(self):
         self.mqtt_client.data = []

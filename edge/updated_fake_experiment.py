@@ -90,6 +90,7 @@ def on_message(client, userdata, msg):
         try:
             orig_time = float(command)
             rtt = (time.time() - orig_time) * 1000
+            client.publish("experiment/rtt/display",rtt)
             print(f"RTT: {rtt:.2f} ms")
         except ValueError:
             print("Invalid time value:", command)
