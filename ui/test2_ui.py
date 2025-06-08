@@ -146,7 +146,7 @@ class MainWindow(QWidget):
 
         # Labels
 
-        self.slider_label = QtWidgets.QLabel("Slider Value: 50")
+        self.slider_label = QtWidgets.QLabel("Frequency: 50")
 
         self.last_values_label = QtWidgets.QLabel("Last 5 Values:\n")
 
@@ -237,7 +237,7 @@ class MainWindow(QWidget):
         self.mqtt_client.data = []
 
     def on_slider_change(self, value):
-        self.slider_label.setText(f"Slider Value: {value}")
+        self.slider_label.setText(f"Frequency: {value}")
         self.mqtt_client.client.publish("experiment/slider", value)
     
     def on_rate_slider_change(self, value):
