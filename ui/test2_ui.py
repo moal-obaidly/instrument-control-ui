@@ -84,11 +84,16 @@ class MQTTClient:
 # PyQt GUI
 class MainWindow(QWidget):
     def __init__(self):
-        global record
+        global record,screen_size
+        screen_size = 0
         import pyqtgraph as pg
         super().__init__()
         self.setWindowTitle("Signal Monitor")
-        self.resize(900, 600)
+        if screen_size == 0:
+            self.resize(900, 600)
+        else:
+            self.showFullScreen()
+            self.resize(1200, 700)
 
         # MQTT
         self.mqtt_client = MQTTClient()
@@ -134,6 +139,9 @@ class MainWindow(QWidget):
 
         self.toggle_layout_btn = QtWidgets.QPushButton("Switch Layout")
         self.toggle_layout_btn.clicked.connect(self.toggle_layout)
+
+        self.toggle_screen_btn = QtWidgets.QPushButton("Toggle screen")
+        self.toggle_screen_btn.clicked.connect(self.toggle_screen)
 
         
 
@@ -199,6 +207,7 @@ class MainWindow(QWidget):
         rate_layout.addWidget(self.low_sample_rate_btn)
         rate_layout.addWidget(self.med_sample_rate_btn)
         rate_layout.addWidget(self.high_sample_rate_btn)
+        rate_layout.addWidget(self.toggle_screen_btn)
         horizontal_main_layout.addLayout(main_layout)
         #horizontal_main_layout.addLayout(rate_layout)
 
@@ -276,6 +285,16 @@ class MainWindow(QWidget):
         index = self.layout_stack.currentIndex()
         new_index = (index + 1) % self.layout_stack.count()
         self.layout_stack.setCurrentIndex(new_index)
+
+    def toggle_screen(self):
+        global screen_size
+        if screen_size == 1:
+            self.resize(900, 600)
+            screen_size = 0
+        else:
+            self.resize(1200, 700)
+            screen_size = 1
+        
     
         
 
