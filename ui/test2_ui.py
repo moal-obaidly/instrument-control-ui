@@ -19,6 +19,7 @@ class MQTTClient:
         self.client.on_message = self.on_message
         self.data = []
         self.rtt = 0
+        self.buffer = 0
         
 
     def on_connect(self, client, userdata, flags, rc):
@@ -38,6 +39,7 @@ class MQTTClient:
                 #timerec = int(time.time()*1000.0)
 
                 self.data.append(value)
+                self.buffer= value
                 #print(f"Value at time{timerec}= {value}")
 
                 #latency = (time.time() - sent_time) * 1000
@@ -285,6 +287,7 @@ class MainWindow(QWidget):
         self.mqtt_client.client.publish("experiment/control", "0",qos=1)
         recent_values = self.mqtt_client.data[-5:]
         print(recent_values)
+        print(self.mqtt_client.buffer)
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "100")
