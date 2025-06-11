@@ -283,6 +283,7 @@ class MainWindow(QWidget):
 
     def stop_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "0",qos=1)
+        print(self.mqtt_client.data[-5:])
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "100")
