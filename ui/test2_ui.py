@@ -55,7 +55,7 @@ class MQTTClient:
                         csv_status = 0
 
 
-                if len(self.data) > 100:
+                if len(self.data) > 2000:
                     self.data.pop(0)
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
