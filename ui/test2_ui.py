@@ -253,7 +253,7 @@ class MainWindow(QWidget):
         # Timer to update plot
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot)
-        self.timer.start(10)
+        self.timer.start(50)
 
     def update_last_values_display(self):
         recent_values = self.mqtt_client.data[-5:]
