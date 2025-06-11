@@ -220,7 +220,7 @@ class MainWindow(QWidget):
         
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.rtt_label)
-        main_layout.addWidget(self.last_values_label)
+        #main_layout.addWidget(self.last_values_label)
 
         experiment_layout.addWidget(self.start_button)
         experiment_layout.addWidget(self.stop_button)
