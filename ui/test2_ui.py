@@ -189,7 +189,13 @@ class MainWindow(QWidget):
         self.layout_stack.addWidget(sampling_widget)
 
         
-        
+        #Styling
+
+        self.close_screen_btn.setStyleSheet("background-color : red")
+        self.toggle_screen_btn.setStyleSheet("background-color : yellow")
+
+
+
 
         # Layout setup
         main_layout.addWidget(self.plot_widget)
@@ -227,6 +233,8 @@ class MainWindow(QWidget):
         record_layout.addWidget(self.stop_record_btn)
         record_layout.addWidget(self.recording_label)
         main_layout.addLayout(record_layout)
+
+        
         
 
         # Timer to update plot
