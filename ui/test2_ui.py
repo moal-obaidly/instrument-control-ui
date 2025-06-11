@@ -37,6 +37,7 @@ class MQTTClient:
                 value = float(value_str)
 
                 self.data.append(value)
+                print(f"Value at time{time.time()}= {value}")
 
                 latency = (time.time() - sent_time) * 1000
                 print(f"Latency: {latency:.2f} ms")
@@ -53,7 +54,7 @@ class MQTTClient:
                         csv_status = 0
 
 
-                if len(self.data) > 10000:
+                if len(self.data) > 1000:
                     self.data.pop(0)
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
