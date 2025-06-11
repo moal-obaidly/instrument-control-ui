@@ -90,10 +90,10 @@ class MainWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Signal Monitor")
         if screen_size == 0:
-            self.resize(900, 600)
+            self.showNormal()
         else:
             self.showFullScreen()
-            self.resize(1200, 700)
+            self.showMaximized()
 
         # MQTT
         self.mqtt_client = MQTTClient()
@@ -288,11 +288,11 @@ class MainWindow(QWidget):
 
     def toggle_screen(self):
         global screen_size
-        if screen_size == 1:
-            self.resize(900, 600)
+        if self.isFullScreen():
+            self.showNormal()
             screen_size = 0
         else:
-            self.resize(1200, 700)
+            self.showFullScreen()
             screen_size = 1
         
     
