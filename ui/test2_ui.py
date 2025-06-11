@@ -35,9 +35,10 @@ class MQTTClient:
                 sent_time_str, value_str = payload.split(",")
                 sent_time = float(sent_time_str)
                 value = float(value_str)
+                timerec = int(time.time()*1000.0)
 
                 self.data.append(value)
-                print(f"Value at time{time.time()}= {value}")
+                print(f"Value at time{timerec}= {value}")
 
                 latency = (time.time() - sent_time) * 1000
                 print(f"Latency: {latency:.2f} ms")
