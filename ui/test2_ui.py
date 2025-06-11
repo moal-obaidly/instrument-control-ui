@@ -81,6 +81,17 @@ class MQTTClient:
         self.client.loop_start()
 
 
+
+#############################################################################
+
+#class Worker(QObject):
+#    finished = pyqtSignal()
+#    progress = pyqtSignal(int)
+
+    #def run(self):
+        
+    #    self.finished.emit()
+
 # PyQt GUI
 class MainWindow(QWidget):
     def __init__(self):
@@ -240,7 +251,7 @@ class MainWindow(QWidget):
         # Timer to update plot
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot)
-        self.timer.start(50)
+        self.timer.start(10)
 
     def update_last_values_display(self):
         recent_values = self.mqtt_client.data[-5:]
