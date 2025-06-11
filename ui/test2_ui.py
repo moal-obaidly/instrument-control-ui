@@ -55,7 +55,7 @@ class MQTTClient:
                         csv_status = 0
 
 
-                if len(self.data) > 500:
+                if len(self.data) > 1000:
                     self.data.pop(0)
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
@@ -283,7 +283,8 @@ class MainWindow(QWidget):
 
     def stop_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "0",qos=1)
-        print(self.mqtt_client.data[-5:])
+        recent_values = self.mqtt_client.data[-5:]
+        print(recent_values)
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "100")
