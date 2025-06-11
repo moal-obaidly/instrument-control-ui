@@ -143,6 +143,9 @@ class MainWindow(QWidget):
         self.toggle_screen_btn = QtWidgets.QPushButton("Toggle screen")
         self.toggle_screen_btn.clicked.connect(self.toggle_screen)
 
+        self.close_screen_btn = QtWidgets.QPushButton("Close screen")
+        self.close_screen_btn.clicked.connect(self.close_screen)
+
         
 
         # Slider
@@ -208,6 +211,7 @@ class MainWindow(QWidget):
         rate_layout.addWidget(self.med_sample_rate_btn)
         rate_layout.addWidget(self.high_sample_rate_btn)
         rate_layout.addWidget(self.toggle_screen_btn)
+        rate_layout.addWidget(self.close_screen_btn)
         horizontal_main_layout.addLayout(main_layout)
         #horizontal_main_layout.addLayout(rate_layout)
 
@@ -294,6 +298,9 @@ class MainWindow(QWidget):
         else:
             self.showFullScreen()
             screen_size = 1
+
+    def close_screen(self):
+        self.close()
         
     
         
