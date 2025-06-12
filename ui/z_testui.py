@@ -292,7 +292,7 @@ class MainWindow(QWidget):
                     msg = self.socket.recv_string(flags=zmq.NOBLOCK)
                     value = float(msg)
                     self.data.append(value)
-                    count += 1
+                    
                 except zmq.Again:
                     break
             else:
