@@ -13,7 +13,7 @@ import sys
 record = 0
 csv_status = 1
 
-
+####################################################################################
 # MQTT Client Setup
 class MQTTClient:
     def __init__(self):
@@ -86,12 +86,54 @@ class MQTTClient:
            
 
     def start(self):
-        self.client.connect("192.168.1.82", 1883, 60) #.36 for laptop, .82 for rpi4
+        self.client.connect("192.168.1.36", 1883, 60) #.36 for laptop, .82 for rpi4
         self.client.loop_start()
 
 
 
 #############################################################################
+
+
+
+class zmq_Subscriber:
+    def __init__(self,socket_address,topic):
+        #creating a zmq subscriber which connects to a socket and then listens to certain topics
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.connect("tcp://192.168.1.36:5556") #36 for laptop, 82 for rpi4
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/data")
+        self.socket.setsockopt(zmq.RCVHWM, 10000)
+
+        self.poller = zmq.Poller()
+        self.poller.register(self.socket, zmq.POLLIN)
+
+        
+
+    def get_all_messages(self):
+        values = []
+        while True:
+            socks = dict(self.poller.poll(0))
+            if self.socket in socks:
+                try:
+                    msg = self.socket.recv_string(flags=zmq.NOBLOCK)
+                    parts = msg.split(" ", 1)
+                    topic = parts[0]
+                    payload = parts[1]
+                    values.append(float(payload))  
+                except zmq.Again:
+                    break
+            else:
+                break
+        return values
+    
+
+class zmq_Publisher():
+    def __init__(self):
+        #creating a zmq pub which binds to a socket to publish messages
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.PUB)
+        self.socket.bind("tcp://*:5557") #36 for laptop, 82 for rpi4
+        
 
 #class Worker(QObject):
 #    finished = pyqtSignal()
@@ -122,16 +164,28 @@ class MainWindow(QWidget):
         self.mqtt_client = MQTTClient()
         self.mqtt_client.start()
         #zmq
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect("tcp://192.168.1.82:5556")
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
-        self.socket.setsockopt(zmq.RCVHWM, 10000)
 
-        self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
+
+
+
+        # self.context = zmq.Context()
+        # self.socket = self.context.socket(zmq.SUB)
+        # self.socket.connect("tcp://192.168.1.82:5556")
+        # self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
+        # self.socket.setsockopt(zmq.RCVHWM, 10000)
+
+        # self.poller = zmq.Poller()
+        # self.poller.register(self.socket, zmq.POLLIN)
+
+        self.zmq_sub_client = zmq_Subscriber("tcp://localhost:5556",1)
+        self.zmq_pub_client = zmq_Publisher()
+
 
         self.data = deque(maxlen=1000)
+
+
+
+
 
 
 
@@ -285,18 +339,25 @@ class MainWindow(QWidget):
 
     def update_plot(self):
         
-        while True:
-            socks = dict(self.poller.poll(0))
-            if self.socket in socks:
-                try:
-                    msg = self.socket.recv_string(flags=zmq.NOBLOCK)
-                    value = float(msg)
-                    self.data.append(value)
+        # while True:
+        #     socks = dict(self.poller.poll(0))
+        #     if self.socket in socks:
+        #         try:
+        #             msg = self.socket.recv_string(flags=zmq.NOBLOCK)
+        #             value = float(msg)
+        #             self.data.append(value)
                     
-                except zmq.Again:
-                    break
-            else:
-                break
+        #         except zmq.Again:
+        #             break
+        #     else:
+        #         break
+        
+        # if self.data:
+        #     self.curve.setData(list(range(len(self.data))), list(self.data))
+
+        values = self.zmq_sub_client.get_all_messages()
+        for i in values:
+            self.data.append(i)
         
         if self.data:
             self.curve.setData(list(range(len(self.data))), list(self.data))
@@ -307,29 +368,29 @@ class MainWindow(QWidget):
 
     def on_slider_change(self, value):
         self.slider_label.setText(f"Frequency: {value}")
-        self.mqtt_client.client.publish("experiment/slider", value)
+        self.zmq_pub_client.socket.send_string(f"experiment/slider {value}")
     
     def on_rate_slider_change(self, value):
         self.rate_slider_label.setText(f"Sampling rate: {value} Hz")
-        self.mqtt_client.client.publish("experiment/rateslider", value)
+        self.zmq_pub_client.socket.send_string(f"experiment/rateslider {value}")
 
     def start_experiment(self):
-        self.mqtt_client.client.publish("experiment/control", "1",qos=1)
+        self.zmq_pub_client.socket.send_string("experiment/control 1")
 
     def stop_experiment(self):
-        self.mqtt_client.client.publish("experiment/control", "0",qos=1)
+        self.zmq_pub_client.socket.send_string("experiment/control 0")
         recent_values = self.mqtt_client.data[-5:]
         print(recent_values)
         print(self.mqtt_client.buffer)
 # Different possible simulated sampling rates
     def low_sample_rate(self):
-        self.mqtt_client.client.publish("experiment/rate", "100")
+        self.zmq_pub_client.socket.send_string("experiment/rate 100")
 
     def med_sample_rate(self):
-        self.mqtt_client.client.publish("experiment/rate", "1000")
+        self.zmq_pub_client.socket.send_string("experiment/rate 1000")
 
     def high_sample_rate(self):
-        self.mqtt_client.client.publish("experiment/rate", "10000")
+        self.zmq_pub_client.socket.send_string("experiment/rate 10000")
     
     def start_record(self): 
         global record, csv_status
