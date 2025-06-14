@@ -19,7 +19,7 @@ pub_socket.bind("tcp://*:5556")
 
 # subscriber logic to get control from ui
 sub_socket = context.socket(zmq.SUB)
-sub_socket.connect("tcp://localhost:5557")  # Assuming control commands come from a PUB on this port
+sub_socket.connect("tcp://192.168.1.66:5557")  # Assuming control commands come from a PUB on this port
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/control")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/slider")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rateslider")
