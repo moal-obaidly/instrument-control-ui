@@ -100,7 +100,7 @@ class zmq_Subscriber:
         #creating a zmq subscriber which connects to a socket and then listens to certain topics
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect("tcp://192.168.1.36:5556") #36 for laptop, 82 for rpi4
+        self.socket.connect("tcp://192.168.1.82:5556") #36 for laptop, 82 for rpi4
         self.socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/data")
         self.socket.setsockopt(zmq.RCVHWM, 10000)
 
