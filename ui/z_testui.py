@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtWidgets, QtCore
 from datetime import datetime
 import zmq
+import threading
 
 from collections import deque
 import sys
@@ -97,11 +98,14 @@ class MQTTClient:
 
 class zmq_Subscriber:
     def __init__(self,socket_address,topic):
+        
         #creating a zmq subscriber which connects to a socket and then listens to certain topics
+        self.rtt = 0
+
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect("tcp://192.168.1.82:5556") #36 for laptop, 82 for rpi4
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/data")
+        self.socket.connect(socket_address) #36 for laptop, 82 for rpi4
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, topic)
         self.socket.setsockopt(zmq.RCVHWM, 10000)
 
         self.poller = zmq.Poller()
@@ -154,12 +158,14 @@ class MainWindow(QWidget):
         import pyqtgraph as pg
         super().__init__()
         self.setWindowTitle("Signal Monitor")
+        
+
         if screen_size == 0:
             self.showNormal()
         else:
             self.showFullScreen()
             
-
+        
         # MQTT
         self.mqtt_client = MQTTClient()
         self.mqtt_client.start()
@@ -177,8 +183,10 @@ class MainWindow(QWidget):
         # self.poller = zmq.Poller()
         # self.poller.register(self.socket, zmq.POLLIN)
 
-        self.zmq_sub_client = zmq_Subscriber("tcp://localhost:5556",1)
+        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.82:5556","experiment/data")
         self.zmq_pub_client = zmq_Publisher()
+
+        self.rtt_client = zmq_Subscriber("tcp://192.168.1.82:5558","")
 
 
         self.data = deque(maxlen=1000)
@@ -188,7 +196,8 @@ class MainWindow(QWidget):
 
 
 
-
+        self.rtt_thread = threading.Thread(target=self.rtt, daemon=True)
+        self.rtt_thread.start()
         # Layouts
         horizontal_main_layout = QtWidgets.QHBoxLayout(self)
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -253,7 +262,7 @@ class MainWindow(QWidget):
 
         self.recording_label = QtWidgets.QLabel("Not recording")
 
-        self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms")
+        self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.rtt_client.rtt)}ms")
 
         
 
@@ -337,6 +346,24 @@ class MainWindow(QWidget):
         text = "\n".join([f"{v:.4f}" for v in recent_values])
         self.last_values_label.setText(f"Last 5 Values:\n{text}")
 
+    def rtt(self):
+        while True:
+            try:
+                msg = self.rtt_client.socket.recv_string(flags=zmq.NOBLOCK)
+                parts = msg.split(" ", 1)
+                
+                topic = parts[0]
+                payload = parts[1]
+                if topic == "experiment/rtt":
+                    print(f"received {payload}")
+                    self.zmq_pub_client.socket.send_string(f"experiment/rtt/response {payload}")
+                elif topic == "experiment/rtt/display":
+                    self.rtt_client.rtt = float(payload)
+                    self.rtt_label.setText(f"RTT: {self.rtt_client.rtt:.2f} ms")
+            except zmq.Again:
+                
+                time.sleep(0.01)
+
     def update_plot(self):
         
         # while True:
@@ -354,13 +381,19 @@ class MainWindow(QWidget):
         
         # if self.data:
         #     self.curve.setData(list(range(len(self.data))), list(self.data))
-
+        
         values = self.zmq_sub_client.get_all_messages()
         for i in values:
             self.data.append(i)
         
         if self.data:
             self.curve.setData(list(range(len(self.data))), list(self.data))
+
+        
+            
+            
+
+       
 
 
     def reset_graph(self):
