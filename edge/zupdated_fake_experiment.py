@@ -96,7 +96,7 @@ def ui_controls():
                 try:
                     orig_time = float(payload)
                     rtt_ms = (time.time() - orig_time) * 1000
-                    # pub_socket.send_string(f"experiment/rtt/display {rtt_ms}")
+                    rtt_socket.send_string(f"experiment/rtt/display {rtt_ms}")
                     print(f"RTT: {rtt_ms:.2f} ms")
                 except ValueError:
                     print("Invalid RTT response value:", payload)
@@ -109,8 +109,7 @@ def ui_controls():
 ui_thread = threading.Thread(target=ui_controls, daemon=True)
 ui_thread.start()
 
-rtt_thread = threading.Thread(target=rtt, daemon=True)
-rtt_thread.start()
+
 
 # Keep main thread alive
 try:
