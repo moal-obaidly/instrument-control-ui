@@ -17,9 +17,13 @@ context = zmq.Context()
 pub_socket = context.socket(zmq.PUB)
 pub_socket.bind("tcp://*:5556")  
 
+#publisher for rtt
+rtt_socket = context.socket(zmq.PUB)
+rtt_socket.bind("tcp://*:5558") 
+
 # subscriber logic to get control from ui
 sub_socket = context.socket(zmq.SUB)
-sub_socket.connect("tcp://192.168.1.66:5557")  # Assuming control commands come from a PUB on this port
+sub_socket.connect("tcp://192.168.1.36:5557")  # 36 for laptop, 82 for rpi 4, 66 for reterminal
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/control")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/slider")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rateslider")
@@ -92,7 +96,7 @@ def ui_controls():
                 try:
                     orig_time = float(payload)
                     rtt_ms = (time.time() - orig_time) * 1000
-                    pub_socket.send_string(f"experiment/rtt/display {rtt_ms}")
+                    # pub_socket.send_string(f"experiment/rtt/display {rtt_ms}")
                     print(f"RTT: {rtt_ms:.2f} ms")
                 except ValueError:
                     print("Invalid RTT response value:", payload)
@@ -104,6 +108,9 @@ def ui_controls():
 # Start control listener in background
 ui_thread = threading.Thread(target=ui_controls, daemon=True)
 ui_thread.start()
+
+rtt_thread = threading.Thread(target=rtt, daemon=True)
+rtt_thread.start()
 
 # Keep main thread alive
 try:
