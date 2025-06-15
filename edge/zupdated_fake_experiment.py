@@ -94,6 +94,7 @@ def ui_controls():
 
             elif topic == "experiment/rtt/response":
                 try:
+                    print("received rtt")
                     orig_time = float(payload)
                     rtt_ms = (time.time() - orig_time) * 1000
                     rtt_socket.send_string(f"experiment/rtt/display {rtt_ms}")
