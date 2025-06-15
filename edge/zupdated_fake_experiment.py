@@ -33,7 +33,7 @@ sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rtt/response")
 def rtt():
     while running:
         rtt_socket.send_string(f"experiment/rtt {time.time()}")
-        time.sleep(5)
+        time.sleep(1)
 
 def start_signal():
     global running, rtt_thread
