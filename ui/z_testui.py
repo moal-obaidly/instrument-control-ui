@@ -183,10 +183,10 @@ class MainWindow(QWidget):
         # self.poller = zmq.Poller()
         # self.poller.register(self.socket, zmq.POLLIN)
 
-        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.34:5556","experiment/data")#34 for rpi5, 82 for pi4
+        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.33:5556","experiment/data")#34 for rpi5, 82 for pi4
         self.zmq_pub_client = zmq_Publisher()
 
-        self.rtt_client = zmq_Subscriber("tcp://192.168.1.34:5558","")
+        self.rtt_client = zmq_Subscriber("tcp://192.168.1.33:5558","")
 
 
         self.data = deque(maxlen=1000)
