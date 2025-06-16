@@ -13,6 +13,7 @@ import sys
 #globals
 record = 0
 csv_status = 1
+count = 0
 
 ####################################################################################
 # MQTT Client Setup
@@ -183,10 +184,10 @@ class MainWindow(QWidget):
         # self.poller = zmq.Poller()
         # self.poller.register(self.socket, zmq.POLLIN)
 
-        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.33:5556","experiment/data")#34 for rpi5, 82 for pi4
+        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.34:5556","experiment/data")#34 for rpi5, 33 for rpi ethernet, 82 for pi4
         self.zmq_pub_client = zmq_Publisher()
 
-        self.rtt_client = zmq_Subscriber("tcp://192.168.1.33:5558","")
+        self.rtt_client = zmq_Subscriber("tcp://192.168.1.34:5558","")
 
 
         self.data = deque(maxlen=1000)
@@ -365,7 +366,7 @@ class MainWindow(QWidget):
                 time.sleep(0.01)
 
     def update_plot(self):
-        
+        global count
         # while True:
         #     socks = dict(self.poller.poll(0))
         #     if self.socket in socks:
@@ -385,6 +386,7 @@ class MainWindow(QWidget):
         values = self.zmq_sub_client.get_all_messages()
         for i in values:
             self.data.append(i)
+            count+=1
         
         if self.data:
             self.curve.setData(list(range(len(self.data))), list(self.data))
@@ -411,10 +413,12 @@ class MainWindow(QWidget):
         self.zmq_pub_client.socket.send_string("experiment/control 1")
 
     def stop_experiment(self):
+        global count
         self.zmq_pub_client.socket.send_string("experiment/control 0")
         recent_values = self.mqtt_client.data[-5:]
         print(recent_values)
         print(self.mqtt_client.buffer)
+        print(count)
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.zmq_pub_client.socket.send_string("experiment/rate 100")
