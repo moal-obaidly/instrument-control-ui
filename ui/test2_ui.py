@@ -30,7 +30,7 @@ class MQTTClient:
         client.subscribe("experiment/rtt/display")
 
     def on_message(self, client, userdata, msg):
-        global csv_status
+        global csv_status, count
         if msg.topic == "experiment/data":
             try:
                 payload = msg.payload.decode()
@@ -286,6 +286,7 @@ class MainWindow(QWidget):
         self.mqtt_client.client.publish("experiment/control", "1",qos=1)
 
     def stop_experiment(self):
+        global count
         self.mqtt_client.client.publish("experiment/control", "0",qos=1)
         recent_values = self.mqtt_client.data[-5:]
         print(recent_values)

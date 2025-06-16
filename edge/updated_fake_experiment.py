@@ -47,7 +47,7 @@ def start_signal():
             print("rate:", 1/rate)
 
 def stop_signal():
-    global running
+    global running, count
     running = False
     print("Signal stopped")
     print(count)
