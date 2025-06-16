@@ -9,10 +9,12 @@ broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
 port = 1883
 topic = "experiment/data"
 
+
 # Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
 rtt_thread = None
+count = 0
 
 freq = 10
 rate = 100
@@ -24,7 +26,7 @@ def rtt():
         time.sleep(5)
 
 def start_signal():
-    global running, freq, rtt_thread
+    global running, freq, rtt_thread, count
     t = np.linspace(0, 1, 1000)
     running = True
     if rtt_thread is None:
@@ -36,6 +38,7 @@ def start_signal():
             if not running:
                 break
             client.publish(topic, f"{time.time()},{value}")
+            count+=1
             #### Checking RTT
             #client.publish("experiment/rtt",time.time())
             ####
@@ -47,6 +50,7 @@ def stop_signal():
     global running
     running = False
     print("Signal stopped")
+    print(count)
 
 def on_connect(client, userdata, flags, rc):
     print("Connected:", rc)

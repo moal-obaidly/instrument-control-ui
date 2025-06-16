@@ -9,6 +9,7 @@ from datetime import datetime
 #globals
 record = 0
 csv_status = 1
+count = 0
 
 
 # MQTT Client Setup
@@ -39,6 +40,7 @@ class MQTTClient:
                 #timerec = int(time.time()*1000.0)
 
                 self.data.append(value)
+                count+=1
                 self.buffer= value
                 #print(f"Value at time{timerec}= {value}")
 
@@ -288,6 +290,7 @@ class MainWindow(QWidget):
         recent_values = self.mqtt_client.data[-5:]
         print(recent_values)
         print(self.mqtt_client.buffer)
+        print(count)
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "100")
