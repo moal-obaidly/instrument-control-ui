@@ -9,7 +9,7 @@ signal_thread = None
 rtt_thread = None
 freq = 10
 rate = 100
-
+count = 0
 #zmq setup
 context = zmq.Context()
 
@@ -23,7 +23,7 @@ rtt_socket.bind("tcp://*:5558")
 
 # subscriber logic to get control from ui
 sub_socket = context.socket(zmq.SUB)
-sub_socket.connect("tcp://192.168.1.65:5557")  # 36 for laptop, 82 for rpi 4, 66 for reterminal
+sub_socket.connect("tcp://192.168.1.66:5557")  # 36 for laptop, 82 for rpi 4, 66 for reterminal, 65 for reterminal ethernet
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/control")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/slider")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rateslider")
@@ -36,7 +36,7 @@ def rtt():
         time.sleep(1)
 
 def start_signal():
-    global running, rtt_thread
+    global running, rtt_thread, count
     t = np.linspace(0, 1, 1000)
     running = True
     if rtt_thread is None or not rtt_thread.is_alive():
@@ -49,6 +49,7 @@ def start_signal():
             if not running:
                 break
             pub_socket.send_string(f"experiment/data {value}")
+            count+=1
             print("Sent:", value)
             time.sleep(1 / rate)
 
@@ -75,6 +76,7 @@ def ui_controls():
                         signal_thread.start()
                 elif payload == "0":
                     stop_signal()
+                    print(count)
 
             elif topic == "experiment/slider":
                 try:
