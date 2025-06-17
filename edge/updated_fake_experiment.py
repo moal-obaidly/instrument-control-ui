@@ -37,7 +37,7 @@ def start_signal():
         for value in signal:
             if not running:
                 break
-            client.publish(topic, f"{time.time()},{value}")
+            client.publish(topic, f"{time.time()},{value}",qos=1)
             count+=1
             #### Checking RTT
             #client.publish("experiment/rtt",time.time())
