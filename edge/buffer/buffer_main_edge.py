@@ -17,6 +17,8 @@ signal_thread = None
 rtt_thread = None
 buffer_thread = None
 count = 0
+single = 0
+b_sent = 0
 
 freq = 10
 rate = 100
@@ -28,8 +30,9 @@ def rtt():
         time.sleep(5)
 
 def publish_buffer():
-    global topic
-    batch_size = 200
+    global topic,b_sent,single,running
+    batch_size = 10
+    
 
     while True:
 
@@ -50,7 +53,7 @@ def publish_buffer():
     
 
         
-            if len(buffered_data) >= batch_size:
+            if len(buffered_data) >= batch_size and running:
                 batch = [buffered_data.pop(0) for i in range(batch_size)]
                 multi_payload = b''.join(batch)
 
@@ -66,6 +69,7 @@ def publish_buffer():
                             buffered_data.insert(0, payload)
                         time.sleep(0.0001)  # cpu safety
                     else:
+                        b_sent+=1
                         time.sleep(0.0001)  # cpu safety
 
                 else:
@@ -74,7 +78,26 @@ def publish_buffer():
                         buffered_data.insert(0, payload)
                     time.sleep(0.01)  # back off a little
 
-            elif buffered_data:
+            # elif buffered_data:
+            #     payload = buffered_data.pop(0)
+
+            #     if client.is_connected():
+            #         # client.publish(topic, payload)
+            #         result = client.publish(topic, payload,qos=1)
+            #         if result.rc != 0:
+            #             print(f"Publish failed (rc={result.rc}) — rebuffering single")
+            #             buffered_data.insert(0, payload)
+            #             time.sleep(0.0001)  # cpu safety
+            #         else:
+            #             single+=1
+            #             time.sleep(0.0001) # cpu safety
+
+   
+            #     else:
+            #         buffered_data.insert(0, payload)
+            #         time.sleep(0.01)
+
+            elif buffered_data and running == False:
                 payload = buffered_data.pop(0)
 
                 if client.is_connected():
@@ -85,6 +108,7 @@ def publish_buffer():
                         buffered_data.insert(0, payload)
                         time.sleep(0.0001)  # cpu safety
                     else:
+                        single+=1
                         time.sleep(0.0001) # cpu safety
 
    
@@ -126,10 +150,12 @@ def start_signal():
             # print("rate:", 1/rate)
 
 def stop_signal():
-    global running, count
+    global running, count,single,b_sent
     running = False
     print("Signal stopped")
     print(count)
+    print(f"batches sent: {b_sent}")
+    print(f"singles sent: {single}")
 
 
 
