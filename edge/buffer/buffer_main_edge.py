@@ -29,24 +29,72 @@ def rtt():
 
 def publish_buffer():
     global topic
-    batch_size = 50
+    batch_size = 200
 
     while True:
 
-        if len(buffered_data) >= batch_size:
-            batch = [buffered_data.pop(0) for i in range(batch_size)]
-            multi_payload = b''.join(batch)
-            client.publish(topic,multi_payload)
-            time.sleep(0.0001)
+        # if len(buffered_data) >= batch_size:
+        #     batch = [buffered_data.pop(0) for i in range(batch_size)]
+        #     multi_payload = b''.join(batch)
+        #     client.publish(topic,multi_payload)
+        #     time.sleep(0.0001)
 
         
-        elif buffered_data:
-            payload = buffered_data.pop(0)
+        # elif buffered_data:
+        #     payload = buffered_data.pop(0)
 
-            client.publish(topic, payload)
-            time.sleep(0.0001)  
-        else:
-            time.sleep(0.001) 
+        #     client.publish(topic, payload)
+        #     time.sleep(0.0001)  
+        # else:
+        #     time.sleep(0.001) 
+    
+
+        
+            if len(buffered_data) >= batch_size:
+                batch = [buffered_data.pop(0) for i in range(batch_size)]
+                multi_payload = b''.join(batch)
+
+                if client.is_connected():
+                    # client.publish(topic, multi_payload,qos=1)
+                    # time.sleep(0.0001)  # prevent flooding
+
+
+                    result = client.publish(topic, multi_payload,qos=1)
+                    if result.rc != 0:
+                        print(f"Publish failed (rc={result.rc}) — rebuffering batch")
+                        for payload in reversed(batch):
+                            buffered_data.insert(0, payload)
+                        time.sleep(0.0001)  # cpu safety
+                    else:
+                        time.sleep(0.0001)  # cpu safety
+
+                else:
+                    # Re-buffer the batch
+                    for payload in reversed(batch):
+                        buffered_data.insert(0, payload)
+                    time.sleep(0.01)  # back off a little
+
+            elif buffered_data:
+                payload = buffered_data.pop(0)
+
+                if client.is_connected():
+                    # client.publish(topic, payload)
+                    result = client.publish(topic, payload,qos=1)
+                    if result.rc != 0:
+                        print(f"Publish failed (rc={result.rc}) — rebuffering single")
+                        buffered_data.insert(0, payload)
+                        time.sleep(0.0001)  # cpu safety
+                    else:
+                        time.sleep(0.0001) # cpu safety
+
+   
+                else:
+                    buffered_data.insert(0, payload)
+                    time.sleep(0.01)
+
+            else:
+                time.sleep(0.001)
+
             
         
 
@@ -95,9 +143,17 @@ def on_connect(client, userdata, flags, rc):
 
 
     #check to see if buffer is empty. if not then send publish all that data
-    while buffered_data:
-        topic, payload = buffered_data.pop(0)
-        client.publish(topic, payload)
+    while len(buffered_data) > 100:
+        print(f"{len(buffered_data)} left to send")
+        batch_size = 100
+        batch = [buffered_data.pop(0) for i in range(batch_size)]
+        multi_payload = b''.join(batch)
+
+        if client.is_connected():
+            client.publish(topic, multi_payload,qos=1)
+            time.sleep(0.0001)  # prevent flooding
+        # payload = buffered_data.pop(0)
+        # client.publish(topic, payload)
     print("Sent buffered data!")
 
 
