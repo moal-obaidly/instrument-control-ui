@@ -59,7 +59,7 @@ def publish_buffer():
                     # time.sleep(0.0001)  # prevent flooding
 
 
-                    result = client.publish(topic, multi_payload,qos=0)
+                    result = client.publish(topic, multi_payload,qos=1)
                     if result.rc != 0:
                         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
                         for payload in reversed(batch):
@@ -79,7 +79,7 @@ def publish_buffer():
 
                 if client.is_connected():
                     # client.publish(topic, payload)
-                    result = client.publish(topic, payload,qos=0)
+                    result = client.publish(topic, payload,qos=1)
                     if result.rc != 0:
                         print(f"Publish failed (rc={result.rc}) — rebuffering single")
                         buffered_data.insert(0, payload)
