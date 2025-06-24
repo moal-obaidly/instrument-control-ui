@@ -151,6 +151,8 @@ def start_signal():
                     checksum += sum(payload)
                     buffered_data.append(payload)
                     count += 1
+                    print(f"RAW LINE: {line}")
+
                     time.sleep(1 / rate)  # optional, if you want to slow down to match rate
             except Exception as e:
                 print("Error decoding ADC value:", e)
