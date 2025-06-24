@@ -5,14 +5,15 @@ import time
 import threading
 import struct
 from collections import deque
-import pyserial
+import serial
 
 # MQTT setup
 broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
 port = 1883
 topic = "experiment/data"
 
-
+# ADC UART setup
+ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=0.1)
 # Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
