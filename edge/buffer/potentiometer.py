@@ -129,33 +129,62 @@ def publish_buffer():
 
 
 def start_signal():
-    global running, freq, rtt_thread, count, buffer_thread,checksum,seq_num
-    t = np.linspace(0, 1, 1000)
+    # global running, freq, rtt_thread, count, buffer_thread,checksum,seq_num
+    # t = np.linspace(0, 1, 1000)
     
-    running = True
-    if rtt_thread is None:
-        rtt_thread = threading.Thread(target = rtt, daemon=True)
-        rtt_thread.start()
-    if buffer_thread is None:
-        buffer_thread = threading.Thread(target = publish_buffer, daemon=True)
-        buffer_thread.start()
-    while running:
-        line = ser.readline()
-        if line:
-            try:
-                value_str = line.decode(errors='ignore').strip()
+    # running = True
+    # if rtt_thread is None:
+    #     rtt_thread = threading.Thread(target = rtt, daemon=True)
+    #     rtt_thread.start()
+    # if buffer_thread is None:
+    #     buffer_thread = threading.Thread(target = publish_buffer, daemon=True)
+    #     buffer_thread.start()
+    # while running:
+    #     line = ser.readline()
+    #     if line:
+    #         try:
+    #             value_str = line.decode(errors='ignore').strip()
                 
-                adc_value = float(value_str)  # or int(value_str) if ADC is int
-                payload = struct.pack('dI', adc_value, seq_num)  # pack float + seq_num
-                seq_num += 1
-                checksum += sum(payload)
-                buffered_data.append(payload)
-                count += 1
-                print(f"RAW LINE: {line}")
+    #             adc_value = float(value_str)  # or int(value_str) if ADC is int
+    #             payload = struct.pack('dI', adc_value, seq_num)  # pack float + seq_num
+    #             seq_num += 1
+    #             checksum += sum(payload)
+    #             buffered_data.append(payload)
+    #             count += 1
+    #             print(f"RAW LINE: {line}")
 
                     
-            except Exception as e:
-                print("Error decoding ADC value:", e)
+    #         except Exception as e:
+    #             print("Error decoding ADC value:", e)
+    
+    global running, freq, rtt_thread, count, buffer_thread, checksum, seq_num
+    running = True
+    if rtt_thread is None:
+        rtt_thread = threading.Thread(target=rtt, daemon=True)
+        rtt_thread.start()
+    if buffer_thread is None:
+        buffer_thread = threading.Thread(target=publish_buffer, daemon=True)
+        buffer_thread.start()
+
+    buffer = b""
+    while running:
+        data = ser.read(ser.in_waiting or 1)
+        buffer += data
+        while b'\n' in buffer:
+            line, buffer = buffer.split(b'\n', 1)
+            line = line.strip()
+            if line:
+                try:
+                    adc_value = int(line)
+                    payload = struct.pack('dI', adc_value, seq_num)
+                    seq_num += 1
+                    checksum += sum(payload)
+                    buffered_data.append(payload)
+                    count += 1
+                    if count % 1000 == 0:
+                        print(f"Sample {count}: {adc_value}")
+                except Exception as e:
+                    print(f"Bad line: {line} | {e}")
 
 
 def stop_signal():
