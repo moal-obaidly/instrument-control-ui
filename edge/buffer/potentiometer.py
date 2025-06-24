@@ -146,7 +146,7 @@ def start_signal():
                 value_str = line.decode(errors='ignore').strip()
                 if value_str:
                     adc_value = float(value_str)  # or int(value_str) if ADC is int
-                    payload = struct.pack('fI', adc_value, seq_num)  # pack float + seq_num
+                    payload = struct.pack('dI', adc_value, seq_num)  # pack float + seq_num
                     seq_num += 1
                     checksum += sum(payload)
                     buffered_data.append(payload)
