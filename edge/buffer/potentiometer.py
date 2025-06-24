@@ -36,7 +36,7 @@ def rtt():
 
 def publish_buffer():
     global topic,batches_sent,singles_sent,running
-    batch_size = 10
+    batch_size = 50
     
 
     while True:
