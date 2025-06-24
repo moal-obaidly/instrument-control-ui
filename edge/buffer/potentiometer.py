@@ -36,7 +36,7 @@ def rtt():
 
 def publish_buffer():
     global topic,batches_sent,singles_sent,running
-    batch_size = 10
+    batch_size = 1
     
 
     while True:
@@ -144,16 +144,16 @@ def start_signal():
         if line:
             try:
                 value_str = line.decode(errors='ignore').strip()
-                if value_str:
-                    adc_value = float(value_str)  # or int(value_str) if ADC is int
-                    payload = struct.pack('dI', adc_value, seq_num)  # pack float + seq_num
-                    seq_num += 1
-                    checksum += sum(payload)
-                    buffered_data.append(payload)
-                    count += 1
-                    print(f"RAW LINE: {line}")
+                
+                adc_value = float(value_str)  # or int(value_str) if ADC is int
+                payload = struct.pack('dI', adc_value, seq_num)  # pack float + seq_num
+                seq_num += 1
+                checksum += sum(payload)
+                buffered_data.append(payload)
+                count += 1
+                print(f"RAW LINE: {line}")
 
-                    time.sleep(1 / rate)  # optional, if you want to slow down to match rate
+                    
             except Exception as e:
                 print("Error decoding ADC value:", e)
 
