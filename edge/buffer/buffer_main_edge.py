@@ -4,6 +4,7 @@ import paho.mqtt.client as mqtt
 import time
 import threading
 import struct
+from collections import deque
 
 # MQTT setup
 broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
@@ -16,13 +17,15 @@ running = False
 signal_thread = None
 rtt_thread = None
 buffer_thread = None
+checksum = 0
 count = 0
-single = 0
-b_sent = 0
+singles_sent = 0
+batches_sent = 0
+seq_num = 1
 
 freq = 10
 rate = 100
-buffered_data = []
+buffered_data = deque()
 def rtt():
     while True:
 
@@ -30,8 +33,8 @@ def rtt():
         time.sleep(5)
 
 def publish_buffer():
-    global topic,b_sent,single,running
-    batch_size = 10
+    global topic,batches_sent,singles_sent,running
+    batch_size = 30
     
 
     while True:
@@ -54,7 +57,7 @@ def publish_buffer():
 
         
             if len(buffered_data) >= batch_size and running:
-                batch = [buffered_data.pop(0) for i in range(batch_size)]
+                batch = [buffered_data.popleft() for i in range(batch_size)]
                 multi_payload = b''.join(batch)
 
                 if client.is_connected():
@@ -66,16 +69,16 @@ def publish_buffer():
                     if result.rc != 0:
                         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
                         for payload in reversed(batch):
-                            buffered_data.insert(0, payload)
+                            buffered_data.appendleft(payload)
                         time.sleep(0.0001)  # cpu safety
                     else:
-                        b_sent+=1
+                        batches_sent+=1
                         time.sleep(0.0001)  # cpu safety
 
                 else:
                     # Re-buffer the batch
                     for payload in reversed(batch):
-                        buffered_data.insert(0, payload)
+                        buffered_data.appendleft(payload)
                     time.sleep(0.01)  # back off a little
 
             # elif buffered_data:
@@ -98,7 +101,7 @@ def publish_buffer():
             #         time.sleep(0.01)
 
             elif buffered_data and running == False:
-                payload = buffered_data.pop(0)
+                payload = buffered_data.popleft()
 
                 if client.is_connected():
                     # client.publish(topic, payload)
@@ -108,7 +111,7 @@ def publish_buffer():
                         buffered_data.insert(0, payload)
                         time.sleep(0.0001)  # cpu safety
                     else:
-                        single+=1
+                        singles_sent+=1
                         time.sleep(0.0001) # cpu safety
 
    
@@ -124,8 +127,9 @@ def publish_buffer():
 
 
 def start_signal():
-    global running, freq, rtt_thread, count, buffer_thread
+    global running, freq, rtt_thread, count, buffer_thread,checksum,seq_num
     t = np.linspace(0, 1, 1000)
+    
     running = True
     if rtt_thread is None:
         rtt_thread = threading.Thread(target = rtt, daemon=True)
@@ -138,7 +142,9 @@ def start_signal():
         for value in signal:
             if not running:
                 break
-            payload = struct.pack('d', value)
+            payload = struct.pack('dI', value,seq_num)
+            seq_num+=1
+            checksum+=sum(payload)
             buffered_data.append(payload)
             # publish(topic, payload) #time.time()}, Took this out to test speed. maybe add it back later
             count+=1
@@ -150,12 +156,14 @@ def start_signal():
             # print("rate:", 1/rate)
 
 def stop_signal():
-    global running, count,single,b_sent
+    global running, count,singles_sent,batches_sent,checksum
     running = False
     print("Signal stopped")
     print(count)
-    print(f"batches sent: {b_sent}")
-    print(f"singles sent: {single}")
+    print(f"batches sent: {batches_sent}")
+    print(f"singles sent: {singles_sent}")
+    print(checksum)
+    client.publish("experiment/checksum", checksum)
 
 
 
@@ -172,7 +180,7 @@ def on_connect(client, userdata, flags, rc):
     while len(buffered_data) > 100:
         print(f"{len(buffered_data)} left to send")
         batch_size = 100
-        batch = [buffered_data.pop(0) for i in range(batch_size)]
+        batch = [buffered_data.popleft() for i in range(batch_size)]
         multi_payload = b''.join(batch)
 
         if client.is_connected():
