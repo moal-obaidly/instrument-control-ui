@@ -232,7 +232,7 @@ def on_disconnect(client, userdata, rc):
 
 
 def on_message(client, userdata, msg):
-    global signal_thread, freq,rate,checksum,count,singles_sent,batches_sent,seq_num 
+    global signal_thread, freq,rate,checksum,count,singles_sent,batches_sent,seq_num ,buffered_data
 
     command = msg.payload.decode()
     print(f"Received on {msg.topic}: {command}")
@@ -272,12 +272,13 @@ def on_message(client, userdata, msg):
             print("Invalid time value:", command)
     elif msg.topic == "experiment/reset":
         try:
-            if command == "1" and (signal_thread is None or not signal_thread.is_alive()):
+            if command == "1" :
                 checksum = 0
                 count = 0
                 singles_sent = 0
                 batches_sent = 0
                 seq_num = 1
+                buffered_data.clear()
                 
             
         except ValueError:
