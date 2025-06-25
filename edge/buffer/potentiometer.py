@@ -131,6 +131,8 @@ def publish_buffer():
 def start_signal():
     global running, freq, rtt_thread, count, buffer_thread,checksum,seq_num
     t = np.linspace(0, 1, 1000)
+    ser.reset_input_buffer()  # resets the uart buffer. so old values are cleared and it can start reading new ones(from when start is pressed)
+
     
     running = True
     if rtt_thread is None:
@@ -196,7 +198,7 @@ def stop_signal():
     print(f"batches sent: {batches_sent}")
     print(f"singles sent: {singles_sent}")
     print(checksum)
-    client.publish("experiment/checksum", checksum)
+    client.publish("experiment/checksum"s, checksum)
 
 
 
