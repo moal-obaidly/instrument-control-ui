@@ -191,6 +191,7 @@ def stop_signal():
     global running, count,singles_sent,batches_sent,checksum
     running = False
     print("Signal stopped")
+    time.sleep(0.5)
     print(count)
     print(f"batches sent: {batches_sent}")
     print(f"singles sent: {singles_sent}")
