@@ -209,6 +209,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("experiment/rateslider")
     client.subscribe("experiment/rate")
     client.subscribe("experiment/rtt/response")
+    client.subscribe("experiment/reset")
 
 
     #check to see if buffer is empty. if not then send publish all that data
@@ -231,7 +232,8 @@ def on_disconnect(client, userdata, rc):
 
 
 def on_message(client, userdata, msg):
-    global signal_thread, freq,rate
+    global signal_thread, freq,rate,checksum,count,singles_sent,batches_sent,seq_num 
+
     command = msg.payload.decode()
     print(f"Received on {msg.topic}: {command}")
     if msg.topic == "experiment/control":
@@ -268,7 +270,18 @@ def on_message(client, userdata, msg):
             print(f"RTT: {rtt:.2f} ms")
         except ValueError:
             print("Invalid time value:", command)
-        
+    elif msg.topic == "experiment/reset":
+        try:
+            if command == "1" and (signal_thread is None or not signal_thread.is_alive()):
+                checksum = 0
+                count = 0
+                singles_sent = 0
+                batches_sent = 0
+                seq_num = 1
+                
+            
+        except ValueError:
+            print("Invalid time value:", command)
 
 # MQTT client setup
 client = mqtt.Client()
