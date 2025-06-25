@@ -151,7 +151,7 @@ def start_signal():
                 checksum += sum(payload)
                 buffered_data.append(payload)
                 count += 1
-                print(f"RAW LINE: {line}")
+                # print(f"RAW LINE: {line}")
 
                     
             except Exception as e:
