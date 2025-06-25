@@ -175,10 +175,11 @@ class MainWindow(QWidget):
         # Plot
         self.plot_widget = pg.PlotWidget(title="Live Signal")
         self.curve = self.plot_widget.plot()
+        self.curve.setPen(pg.mkPen(color='#00e676', width=2)) # this changes plot colour
 
         # Buttons
-        self.reset_btn = QtWidgets.QPushButton("Reset Graph")
-        self.reset_btn.clicked.connect(self.reset_graph)
+        self.reset_btn = QtWidgets.QPushButton("Reset Experiment")
+        self.reset_btn.clicked.connect(self.reset_experiment)
 
         self.start_button = QtWidgets.QPushButton("Start Experiment")
         self.start_button.clicked.connect(self.start_experiment)
@@ -227,6 +228,10 @@ class MainWindow(QWidget):
         self.checksum_label = QtWidgets.QLabel("Validation:\n")
 
         self.recording_label = QtWidgets.QLabel("Not recording")
+        self.recording_led = QtWidgets.QFrame()
+        self.recording_led.setFixedSize(20, 20)
+        self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
+
 
         self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms")
 
@@ -298,6 +303,8 @@ class MainWindow(QWidget):
         record_layout.addWidget(self.start_record_btn)
         record_layout.addWidget(self.stop_record_btn)
         record_layout.addWidget(self.recording_label)
+        record_layout.addWidget(self.recording_led)
+
         main_layout.addLayout(record_layout)
 
         
@@ -327,6 +334,9 @@ class MainWindow(QWidget):
         x = np.arange(len(self.mqtt_client.data)) * (1 / 10000)
         self.curve.setData(self.mqtt_client.data)
         self.plot_widget.setYRange(-1, 4096, padding=0) # change if using adc or sine simu.
+        self.plot_widget.setLabel('left', 'ADC Value')
+        
+
 
         self.update_count_display()
         self.update_checksum_display()
@@ -335,8 +345,14 @@ class MainWindow(QWidget):
         #print(f"Current RTT in GUI update: {self.mqtt_client.rtt}")
 
 
-    def reset_graph(self):
+    def reset_experiment(self):
+        global count
         self.mqtt_client.data = []
+        self.mqtt_client.client.publish("experiment/reset", "1",qos=1)
+        count = 0
+        self.mqtt_client.checksum = 0
+        self.mqtt_client.old_seq=0
+        self.mqtt_client.received_seqs.clear()
 
     def on_slider_change(self, value):
         self.slider_label.setText(f"Frequency: {value}")
@@ -348,10 +364,12 @@ class MainWindow(QWidget):
 
     def start_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "1",qos=1)
+        self.reset_btn.setEnabled(False)
 
     def stop_experiment(self):
         global count
         self.mqtt_client.client.publish("experiment/control", "0",qos=1)
+        self.reset_btn.setEnabled(True)
         recent_values = self.mqtt_client.data[-5:]
         print(recent_values)
         print(self.mqtt_client.buffer)
@@ -371,6 +389,7 @@ class MainWindow(QWidget):
         record = 1
         if csv_status == 1:
             self.recording_label.setText("Recording")
+            self.set_recording_led(record)
         else:
             self.recording_label.setText("Failed to record")
 
@@ -378,6 +397,7 @@ class MainWindow(QWidget):
         global record
         record = 0
         self.recording_label.setText("Stopped Recording")
+        self.set_recording_led(record)
 
     def toggle_layout(self):
         index = self.layout_stack.currentIndex()
@@ -392,6 +412,13 @@ class MainWindow(QWidget):
         else:
             self.showFullScreen()
             screen_size = 1
+    
+    def set_recording_led(self, recording):
+        if record:
+            self.recording_led.setStyleSheet("background-color: red; border-radius: 10px;")
+        else:
+            self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
+
 
     def close_screen(self):
         self.close()
