@@ -198,7 +198,7 @@ def stop_signal():
     print(f"batches sent: {batches_sent}")
     print(f"singles sent: {singles_sent}")
     print(checksum)
-    client.publish("experiment/checksum"s, checksum)
+    client.publish("experiment/checksum", checksum)
 
 
 
