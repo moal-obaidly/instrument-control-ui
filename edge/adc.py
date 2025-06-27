@@ -4,6 +4,7 @@ import paho.mqtt.client as mqtt
 import time
 import threading
 import serial
+import struct
 
 # MQTT setup
 broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
@@ -41,7 +42,8 @@ def start_signal():
             try:
                 value = line.decode(errors='ignore').strip()
                 if value:
-                    client.publish(topic, f"{value}")
+                    payload =struct.pack('d', value)
+                    client.publish(topic, f"{payload}")
                     print("Sent ADC:", value)
             except Exception as e:
                 print("Error:", e)
