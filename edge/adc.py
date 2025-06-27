@@ -45,7 +45,8 @@ def start_signal():
                 if value:
                     payload =struct.pack('d', adc_value)
                     client.publish(topic, payload)
-                    print("Sent ADC:", value)
+                    count+=1
+                    # print("Sent ADC:", value)
             except Exception as e:
                 print("Error:", e)
 
