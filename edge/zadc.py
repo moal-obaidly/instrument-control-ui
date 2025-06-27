@@ -14,7 +14,7 @@ rate = 100
 count = 0
 #zmq setup
 context = zmq.Context()
-ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=0.1)
+ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
 
 # publisher that sends data
 pub_socket = context.socket(zmq.PUB)
