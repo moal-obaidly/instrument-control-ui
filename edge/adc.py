@@ -30,6 +30,7 @@ def rtt():
 def start_signal():
     global running, freq, rtt_thread, count
     # t = np.linspace(0, 1, 1000)
+    ser.reset_input_buffer()
     running = True
     if rtt_thread is None:
         rtt_thread = threading.Thread(target = rtt, daemon=True)
@@ -40,7 +41,7 @@ def start_signal():
             try:
                 value = line.decode(errors='ignore').strip()
                 if value:
-                    client.publish(topic, f"{time.time()},{value}")
+                    client.publish(topic, f"{value}")
                     print("Sent ADC:", value)
             except Exception as e:
                 print("Error:", e)
