@@ -41,8 +41,9 @@ def start_signal():
         if line:
             try:
                 value = line.decode(errors='ignore').strip()
+                adc_value = float(value)
                 if value:
-                    payload =struct.pack('d', value)
+                    payload =struct.pack('d', adc_value)
                     client.publish(topic, f"{payload}")
                     print("Sent ADC:", value)
             except Exception as e:
