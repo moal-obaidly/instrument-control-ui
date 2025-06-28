@@ -130,7 +130,7 @@ def start_signal():
                     value = line.decode(errors='ignore').strip()
                     if value:
                         adc_value = float(value)
-                        payload = struct.pack('d', adc_value)
+                        payload = struct.pack('dI', adc_value,seq_num)
                         seq_num += 1
                         checksum += sum(payload)
                         buffered_data.append(payload)
