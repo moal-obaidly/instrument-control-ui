@@ -140,7 +140,7 @@ def start_signal():
                     print("Error:", e)
 
 def stop_signal():
-    global running
+    global running,batches_sent,singles_sent,checksum
     running = False
     print("Signal stopped")
     time.sleep(0.1)
@@ -148,7 +148,7 @@ def stop_signal():
     print(f"batches sent: {batches_sent}")
     print(f"singles sent: {singles_sent}")
     print(checksum)
-    pub_socket.send_multipart([b"experiment/checksum", checksum])
+    pub_socket.send_multipart([b"experiment/checksum", str(checksum).encode()])
 
 def ui_controls():
     while True:
