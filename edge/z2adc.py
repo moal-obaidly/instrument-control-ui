@@ -10,6 +10,7 @@ from collections import deque
 running = False
 signal_thread = None
 rtt_thread = None
+buffer_thread = None
 freq = 10
 rate = 100
 checksum = 0
@@ -112,12 +113,15 @@ def publish_buffer():
                 time.sleep(0.001)
 
 def start_signal():
-    global running, rtt_thread, count
+    global running, rtt_thread, count, buffer_thread,checksum,seq_num
     t = np.linspace(0, 1, 1000)
     running = True
     if rtt_thread is None or not rtt_thread.is_alive():
         rtt_thread = threading.Thread(target=rtt, daemon=True)
         rtt_thread.start()
+    if buffer_thread is None:
+        buffer_thread = threading.Thread(target = publish_buffer, daemon=True)
+        buffer_thread.start()
 
     while running:
             line = ser.readline()
