@@ -114,6 +114,7 @@ def publish_buffer():
 
 def start_signal():
     global running, rtt_thread, count, buffer_thread,checksum,seq_num
+    ser.reset_input_buffer()
     t = np.linspace(0, 1, 1000)
     running = True
     if rtt_thread is None or not rtt_thread.is_alive():
