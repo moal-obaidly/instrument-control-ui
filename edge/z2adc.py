@@ -77,7 +77,7 @@ def publish_buffer():
                 
 
 
-                result = pub_socket.send_multipart([b"experiment/data", payload])
+                result = pub_socket.send_multipart([b"experiment/data", multi_payload])
                 # if result.rc != 0:
                 #         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
                 #         for payload in reversed(batch):
