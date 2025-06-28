@@ -143,6 +143,12 @@ def stop_signal():
     global running
     running = False
     print("Signal stopped")
+    time.sleep(0.1)
+    print(count)
+    print(f"batches sent: {batches_sent}")
+    print(f"singles sent: {singles_sent}")
+    print(checksum)
+    pub_socket.send_multipart([b"experiment/checksum", checksum])
 
 def ui_controls():
     while True:
@@ -162,7 +168,7 @@ def ui_controls():
                         signal_thread.start()
                 elif payload == "0":
                     stop_signal()
-                    print(count)
+                    
 
             elif topic == "experiment/slider":
                 try:
