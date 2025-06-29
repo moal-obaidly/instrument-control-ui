@@ -3,15 +3,30 @@ import paho.mqtt.client as mqtt
 import time
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import QTimer
 from datetime import datetime
 import struct
 import numpy as np
+import os
 
 
 #globals
 record = 0
 csv_status = 1
 count = 0
+sample_count = 0
+
+
+
+current_working_directory = os.getcwd()
+experiments_folder = f"{current_working_directory}/Experiments"
+past_experiments = 0
+# Count the number of files in the *experiments* directory
+for path in os.listdir(experiments_folder):
+    if os.path.isfile(os.path.join(experiments_folder,path)):
+        past_experiments+=1
+
+print(past_experiments)
 
 
 # MQTT Client Setup
@@ -28,6 +43,8 @@ class MQTTClient:
         self.expected_checksum = 0
         self.old_seq = 0
         self.received_seqs = set()
+        self.old_time = time.time
+        self.sample_rate= 0
 
         
         
@@ -41,7 +58,7 @@ class MQTTClient:
 
 
     def on_message(self, client, userdata, msg):
-        global csv_status, count
+        global csv_status, count,past_experiments,sample_count
         if msg.topic == "experiment/data":
             try:                                                  #
                 # payload = msg.payload.decode()                  # with time sent 
@@ -49,6 +66,7 @@ class MQTTClient:
                 # sent_time = float(sent_time_str)                # 
                 # value = float(value_str) 
                 #
+                
                 payload = msg.payload
                 for i in range (0,len(payload),12) :                      #
 
@@ -62,7 +80,33 @@ class MQTTClient:
                         self.checksum += sum(payload[i:i+12])
                         self.data.append(value)
                         count += 1
+                        sample_count +=1
                         self.buffer= value
+                        current_time = time.time()
+
+                        if current_time - self.old_time >= 1.0:
+                            self.sample_rate = sample_count
+                            sample_count = 0
+                            self.old_time = current_time
+                        
+                            
+
+
+                        if record == 1:
+                    
+                            try:
+                                with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
+                                    csv_status = 1
+                                    timestamp = datetime.now().isoformat() # gets the current date and time
+                                    f.write(f"{timestamp},{value}\n")
+                                    
+                                    
+                            except IOError:
+                                print("Could not write to CSV. Please close CSV file and try again")
+                                csv_status = 0
+
+
+
                     else:
                         print(f"Duplicate or old packet seq={seq} ignored")
                 #print(f"Value at time{timerec}= {value}")
@@ -70,16 +114,18 @@ class MQTTClient:
                 #latency = (time.time() - sent_time) * 1000
                 #print(f"Latency: {latency:.2f} ms")
 
-                if record == 1:
-                    try:
-                        with open("signal.csv", "a") as f:
-                            csv_status = 1
-                            timestamp = datetime.now().isoformat() # gets the current date and time
-                            f.write(f"{timestamp},{value}\n")
+                # if record == 1:
+                    
+                #     try:
+                #         with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
+                #             csv_status = 1
+                #             timestamp = datetime.now().isoformat() # gets the current date and time
+                #             f.write(f"{timestamp},{self.data}\n")
                             
-                    except IOError:
-                        print("Could not write to CSV. Please close CSV file and try again")
-                        csv_status = 0
+                            
+                #     except IOError:
+                #         print("Could not write to CSV. Please close CSV file and try again")
+                #         csv_status = 0
 
                 self.data = self.data[-1000:]
                 # if len(self.data) > 1000:    IT WAS NOT ENOUGH WITH BATCH SENDING. ONLY POPPING ONE AT A TIME WASNT REMOVING ENOUGH
@@ -109,13 +155,7 @@ class MQTTClient:
                 self.expected_checksum = int(msg.payload.decode())
                 
                 print(msg.payload)
-                
-
-                
-                
-               
-                
-
+             
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
            
@@ -147,7 +187,7 @@ class MQTTClient:
 # PyQt GUI
 class MainWindow(QWidget):
     def __init__(self):
-        global record,screen_size
+        global record,screen_size,past_experiments
         screen_size = 0
         import pyqtgraph as pg
         super().__init__()
@@ -232,6 +272,8 @@ class MainWindow(QWidget):
         self.recording_led.setFixedSize(20, 20)
         self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
 
+        self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past  experiments: {past_experiments}")
+
 
         self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms")
 
@@ -243,7 +285,7 @@ class MainWindow(QWidget):
         self.rate_slider.setMaximum(10000)
         self.rate_slider.setValue(100)
         self.rate_slider.valueChanged.connect(self.on_rate_slider_change)
-        self.rate_slider_label = QtWidgets.QLabel("Sampling rate: 100 Hz")
+        self.rate_slider_label = QtWidgets.QLabel(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
         
         
 
@@ -279,11 +321,15 @@ class MainWindow(QWidget):
         main_layout.addWidget(self.rtt_label)
         main_layout.addWidget(self.count_label)
         main_layout.addWidget(self.checksum_label)
+        main_layout.addLayout(experiment_layout)
+        main_layout.addLayout(record_layout)
+        main_layout.addWidget(self.number_of_experiments_label)
 
         experiment_layout.addWidget(self.start_button)
         experiment_layout.addWidget(self.stop_button)
-        main_layout.addLayout(experiment_layout)
+        
 
+        rate_layout.addWidget(self.rate_slider_label)
         rate_layout.addWidget(self.low_sample_rate_btn)
         rate_layout.addWidget(self.med_sample_rate_btn)
         rate_layout.addWidget(self.high_sample_rate_btn)
@@ -292,7 +338,7 @@ class MainWindow(QWidget):
         horizontal_main_layout.addLayout(main_layout)
         #horizontal_main_layout.addLayout(rate_layout)
 
-        sampling_layout.addWidget(self.rate_slider_label)
+        # sampling_layout.addWidget(self.rate_slider_label)
         sampling_layout.addWidget(self.rate_slider)
         #horizontal_main_layout.addLayout(sampling_layout)
         switch_layout.addWidget(self.toggle_layout_btn)
@@ -305,7 +351,7 @@ class MainWindow(QWidget):
         record_layout.addWidget(self.recording_label)
         record_layout.addWidget(self.recording_led)
 
-        main_layout.addLayout(record_layout)
+        
 
         
         
@@ -319,6 +365,11 @@ class MainWindow(QWidget):
         global count
         
         self.count_label.setText(f"Samples Received:\n{count}")
+
+    def update_sample_rate_display(self):
+        global count
+        
+        self.rate_slider_label.setText(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
 
     def update_checksum_display(self):
         result = self.mqtt_client.compare_checksum()
@@ -340,6 +391,7 @@ class MainWindow(QWidget):
 
         self.update_count_display()
         self.update_checksum_display()
+        self.update_sample_rate_display()
         self.rtt_label.setText(f"RTT:{self.mqtt_client.rtt:.2f}ms")
         
         #print(f"Current RTT in GUI update: {self.mqtt_client.rtt}")
@@ -365,6 +417,7 @@ class MainWindow(QWidget):
     def start_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "1",qos=1)
         self.reset_btn.setEnabled(False)
+        self.mqtt_client.old_time = time.time()
 
     def stop_experiment(self):
         global count
@@ -385,8 +438,9 @@ class MainWindow(QWidget):
         self.mqtt_client.client.publish("experiment/rate", "10000")
     
     def start_record(self): 
-        global record, csv_status
+        global record, csv_status,past_experiments
         record = 1
+        past_experiments+=1
         if csv_status == 1:
             self.recording_label.setText("Recording")
             self.set_recording_led(record)
@@ -398,6 +452,14 @@ class MainWindow(QWidget):
         record = 0
         self.recording_label.setText("Stopped Recording")
         self.set_recording_led(record)
+        self.show_temp_message(self.number_of_experiments_label,f"Saved to Experiments/Experiment{past_experiments}.csv")
+
+    def show_temp_message(self,label,temp_msg,show_duration = 2000):
+        original_msg = label.text()
+        label.setText(temp_msg)
+        QTimer.singleShot(show_duration, lambda: label.setText(f"Number of past  experiments: {past_experiments}"))
+
+
 
     def toggle_layout(self):
         index = self.layout_stack.currentIndex()
