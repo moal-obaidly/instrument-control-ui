@@ -436,6 +436,7 @@ class MainWindow(QWidget):
         self.sampling_rate_label.setText(f"Current sampling rate: {self.zmq_sub_client.sample_rate}Hz")
 
     def reset_graph(self):
+        global count
         self.zmq_sub_client.data = []
         self.zmq_pub_client.socket.send_string(f"experiment/reset {"1"}")
         count = 0
@@ -473,8 +474,9 @@ class MainWindow(QWidget):
         self.zmq_pub_client.socket.send_string("experiment/rate 10000")
     
     def start_record(self): 
-        global record, csv_status
+        global record, csv_status,past_experiments
         record = 1
+        past_experiments+=1
         if csv_status == 1:
             self.recording_label.setText("Recording")
             self.set_recording_led(record)
