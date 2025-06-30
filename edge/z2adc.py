@@ -39,6 +39,7 @@ sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/slider")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rateslider")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rate")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rtt/response")
+sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/reset")
 
 def rtt():
     while running:
@@ -52,38 +53,11 @@ def publish_buffer():
     
 
     while True:
-
-        # if len(buffered_data) >= batch_size:
-        #     batch = [buffered_data.pop(0) for i in range(batch_size)]
-        #     multi_payload = b''.join(batch)
-        #     client.publish(topic,multi_payload)
-        #     time.sleep(0.0001)
-
-        
-        # elif buffered_data:
-        #     payload = buffered_data.pop(0)
-
-        #     client.publish(topic, payload)
-        #     time.sleep(0.0001)  
-        # else:
-        #     time.sleep(0.001) 
-    
-
-        
+                   
             if len(buffered_data) >= batch_size and running:
                 batch = [buffered_data.popleft() for i in range(batch_size)]
                 multi_payload = b''.join(batch)
-
-                
-
-
-                result = pub_socket.send_multipart([b"experiment/data", multi_payload])
-                # if result.rc != 0:
-                #         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
-                #         for payload in reversed(batch):
-                #             buffered_data.appendleft(payload)
-                #         time.sleep(0.0001)  # cpu safety
-                #     else:
+                result = pub_socket.send_multipart([b"experiment/data", multi_payload])             
                 batches_sent+=1
                 time.sleep(0.0001)  # cpu safety
 
@@ -98,7 +72,7 @@ def publish_buffer():
                 payload = buffered_data.popleft()
 
                 
-                    # client.publish(topic, payload)
+                    
                 result = pub_socket.send_multipart([b"experiment/data", payload])
                    
                 singles_sent+=1
@@ -151,6 +125,8 @@ def stop_signal():
     pub_socket.send_multipart([b"experiment/checksum", str(checksum).encode()])
 
 def ui_controls():
+    global checksum,count,singles_sent,batches_sent,seq_num,buffered_data
+    
     while True:
         try:
             msg = sub_socket.recv_string()
@@ -195,6 +171,19 @@ def ui_controls():
                     print(f"RTT: {rtt_ms:.2f} ms")
                 except ValueError:
                     print("Invalid RTT response value:", payload)
+            elif topic == "experiment/reset":
+                try:
+                    if payload == "1" :
+                        checksum = 0
+                        count = 0
+                        singles_sent = 0
+                        batches_sent = 0
+                        seq_num = 1
+                        buffered_data.clear()
+                        
+                    
+                except ValueError:
+                    print("Invalid time value:", payload)
 
         except zmq.ZMQError as e:
             print("ZMQ error:", e)
