@@ -3,10 +3,12 @@ import paho.mqtt.client as mqtt
 import time
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import QTimer
 from datetime import datetime
 import zmq
 import threading
 import struct
+import os
 
 from collections import deque
 import sys
@@ -15,9 +17,18 @@ import sys
 record = 0
 csv_status = 1
 count = 0
+sample_count=0
 
 ####################################################################################
+current_working_directory = os.getcwd()
+experiments_folder = f"{current_working_directory}/Experiments"
+past_experiments = 0
+# Count the number of files in the *experiments* directory
+for path in os.listdir(experiments_folder):
+    if os.path.isfile(os.path.join(experiments_folder,path)):
+        past_experiments+=1
 
+print(past_experiments)
 
 
 #############################################################################
@@ -36,6 +47,13 @@ class zmq_Subscriber:
         self.old_seq = 0
         self.received_seqs = set()
 
+        #for sample rate
+        self.old_time = time.time()
+        self.sample_rate= 0
+
+        #for csv
+        self.record_buffer = []
+
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.connect(socket_address) 
@@ -48,7 +66,7 @@ class zmq_Subscriber:
         
 
     def get_all_messages(self):
-        global count
+        global count,sample_count
         self.data = []
         while True:
             socks = dict(self.poller.poll(0))
@@ -64,8 +82,25 @@ class zmq_Subscriber:
                                 self.checksum += sum(payload[i:i+12])
                                 self.data.append(value)
                                 count += 1
+                                sample_count +=1
+                                current_time = time.time()
                                 
                                 self.buffer= value
+
+                                #checks if one second has passed then updates the sample rate
+                                if current_time - self.old_time >= 1.0:
+                                    self.sample_rate = sample_count
+                                    sample_count = 0
+                                    self.old_time = current_time
+
+                                #if recording then save to file
+                                if record == 1:
+
+                                    timestamp = datetime.now().isoformat() # gets the current date and time
+                                    self.record_buffer.append(f"{timestamp},{value}\n")
+
+                                    if len(self.record_buffer) > 100:
+                                        self.save_to_file()
                     elif topic == b"experiment/checksum":
                         try:
                             self.expected_checksum = int(payload.decode())
@@ -91,6 +126,16 @@ class zmq_Subscriber:
         else:
             
             return 0
+    def save_to_file(self):
+        try:
+            with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
+                csv_status = 1
+                for i in self.record_buffer:
+                    f.write(i)
+                self.record_buffer.clear()
+        except IOError:
+                print("Could not write to CSV. Please close CSV file and try again")
+                csv_status = 0
     
 
 class zmq_Publisher():
@@ -221,6 +266,12 @@ class MainWindow(QWidget):
 
         self.recording_label = QtWidgets.QLabel("Not recording")
 
+        self.recording_led = QtWidgets.QFrame()
+        self.recording_led.setFixedSize(20, 20)
+        self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
+
+        self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past  experiments: {past_experiments}")
+
         self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.rtt_client.rtt)}ms")
 
         self.count_label = QtWidgets.QLabel("Samples received:\n")
@@ -235,6 +286,7 @@ class MainWindow(QWidget):
         self.rate_slider.setValue(100)
         self.rate_slider.valueChanged.connect(self.on_rate_slider_change)
         self.rate_slider_label = QtWidgets.QLabel("Sampling rate: 100 Hz")
+        self.sampling_rate_label = QtWidgets.QLabel(f"Current sampling rate: {self.zmq_sub_client.sample_rate}Hz")
         
         
 
@@ -271,11 +323,14 @@ class MainWindow(QWidget):
         main_layout.addWidget(self.count_label)
         main_layout.addWidget(self.checksum_label)
         #main_layout.addWidget(self.last_values_label)
+        main_layout.addLayout(experiment_layout)
+        main_layout.addLayout(record_layout)
+        main_layout.addWidget(self.number_of_experiments_label)
 
         experiment_layout.addWidget(self.start_button)
         experiment_layout.addWidget(self.stop_button)
-        main_layout.addLayout(experiment_layout)
-
+        
+        rate_layout.addWidget(self.sampling_rate_label)
         rate_layout.addWidget(self.low_sample_rate_btn)
         rate_layout.addWidget(self.med_sample_rate_btn)
         rate_layout.addWidget(self.high_sample_rate_btn)
@@ -295,7 +350,8 @@ class MainWindow(QWidget):
         record_layout.addWidget(self.start_record_btn)
         record_layout.addWidget(self.stop_record_btn)
         record_layout.addWidget(self.recording_label)
-        main_layout.addLayout(record_layout)
+        record_layout.addWidget(self.recording_led)
+        
 
         
         
@@ -357,6 +413,7 @@ class MainWindow(QWidget):
 
         self.update_count_display()
         self.update_checksum_display()
+        self.update_sample_rate_display()
 
         
             
@@ -373,9 +430,18 @@ class MainWindow(QWidget):
             global count
             
             self.count_label.setText(f"Samples Received:\n{count}")
+    def update_sample_rate_display(self):
+        global count
+        
+        self.sampling_rate_label.setText(f"Current sampling rate: {self.zmq_sub_client.sample_rate}Hz")
 
     def reset_graph(self):
         self.zmq_sub_client.data = []
+        self.zmq_pub_client.socket.send_string(f"experiment/reset {"1"}")
+        count = 0
+        self.zmq_sub_client.checksum = 0
+        self.zmq_sub_client.old_seq=0
+        self.zmq_sub_client.received_seqs.clear()
 
     def on_slider_change(self, value):
         self.slider_label.setText(f"Frequency: {value}")
@@ -411,6 +477,7 @@ class MainWindow(QWidget):
         record = 1
         if csv_status == 1:
             self.recording_label.setText("Recording")
+            self.set_recording_led(record)
         else:
             self.recording_label.setText("Failed to record")
 
@@ -418,6 +485,15 @@ class MainWindow(QWidget):
         global record
         record = 0
         self.recording_label.setText("Stopped Recording")
+        self.set_recording_led(record)
+        if self.zmq_sub_client.record_buffer:
+            self.zmq_sub_client.save_to_file()
+        self.show_temp_message(self.number_of_experiments_label,f"Saved to Experiments/Experiment{past_experiments}.csv")
+    
+    def show_temp_message(self,label,temp_msg,show_duration = 2000):
+        original_msg = label.text()
+        label.setText(temp_msg)
+        QTimer.singleShot(show_duration, lambda: label.setText(f"Number of past  experiments: {past_experiments}"))
 
     def toggle_layout(self):
         index = self.layout_stack.currentIndex()
@@ -432,6 +508,13 @@ class MainWindow(QWidget):
         else:
             self.showFullScreen()
             screen_size = 1
+
+            
+    def set_recording_led(self, recording):
+        if record:
+            self.recording_led.setStyleSheet("background-color: red; border-radius: 10px;")
+        else:
+            self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
 
     def close_screen(self):
         print(list(self.data)[-10:])
