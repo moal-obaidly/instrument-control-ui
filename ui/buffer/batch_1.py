@@ -102,7 +102,7 @@ class MQTTClient:
                             timestamp = datetime.now().isoformat() # gets the current date and time
                             self.record_buffer.append(f"{timestamp},{value}\n")
 
-                            if len(self.record_buffer) > 50:
+                            if len(self.record_buffer) > 100:
                                 self.save_to_file()
                     
                                 # try:
