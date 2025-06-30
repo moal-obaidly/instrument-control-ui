@@ -46,6 +46,8 @@ class MQTTClient:
         self.old_time = time.time
         self.sample_rate= 0
 
+        self.record_buffer = []
+
         
         
 
@@ -84,6 +86,9 @@ class MQTTClient:
                         self.buffer= value
                         current_time = time.time()
 
+
+                        
+
                         if current_time - self.old_time >= 1.0:
                             self.sample_rate = sample_count
                             sample_count = 0
@@ -93,17 +98,26 @@ class MQTTClient:
 
 
                         if record == 1:
+
+                            timestamp = datetime.now().isoformat() # gets the current date and time
+                            self.record_buffer.append(f"{timestamp},{value}\n")
+
+                            if len(self.record_buffer) > 50:
+                                self.save_to_file()
                     
-                            try:
-                                with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
-                                    csv_status = 1
-                                    timestamp = datetime.now().isoformat() # gets the current date and time
-                                    f.write(f"{timestamp},{value}\n")
-                                    
-                                    
-                            except IOError:
-                                print("Could not write to CSV. Please close CSV file and try again")
-                                csv_status = 0
+                                # try:
+                                #     with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
+                                #         csv_status = 1
+                                #         for i in self.record_buffer:
+                                #             f.write(i)
+                                #         self.record_buffer.clear()
+                                #         # timestamp = datetime.now().isoformat() # gets the current date and time
+                                #         # f.write(f"{timestamp},{value}\n")
+                                        
+                                        
+                                # except IOError:
+                                #     print("Could not write to CSV. Please close CSV file and try again")
+                                #     csv_status = 0
 
 
 
@@ -167,6 +181,23 @@ class MQTTClient:
         else:
             
             return 0
+            
+    def save_to_file(self):
+        try:
+            with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
+                csv_status = 1
+                for i in self.record_buffer:
+                    f.write(i)
+                self.record_buffer.clear()
+                                        # timestamp = datetime.now().isoformat() # gets the current date and time
+                                        # f.write(f"{timestamp},{value}\n")
+                                        
+                                        
+        except IOError:
+                print("Could not write to CSV. Please close CSV file and try again")
+                csv_status = 0
+                                        
+    
 
     def start(self):
         self.client.connect("192.168.1.82", 1883, 60) #.36 for laptop, .82 for rpi4
@@ -452,6 +483,8 @@ class MainWindow(QWidget):
         record = 0
         self.recording_label.setText("Stopped Recording")
         self.set_recording_led(record)
+        if self.mqtt_client.record_buffer:
+            self.mqtt_client.save_to_file()
         self.show_temp_message(self.number_of_experiments_label,f"Saved to Experiments/Experiment{past_experiments}.csv")
 
     def show_temp_message(self,label,temp_msg,show_duration = 2000):
