@@ -82,7 +82,7 @@ class MQTTClient:
                         self.received_seqs.add(seq)
                         self.checksum += sum(payload[i:i+12])
                         self.data.append(value)
-                        print(value)
+                        # print(value)
                         count += 1
                         sample_count +=1
                         self.buffer= value
