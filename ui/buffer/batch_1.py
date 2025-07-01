@@ -43,9 +43,10 @@ class MQTTClient:
         self.expected_checksum = 0
         self.old_seq = 0
         self.received_seqs = set()
+        #for sample rate
         self.old_time = time.time
         self.sample_rate= 0
-
+        #for saving to csv
         self.record_buffer = []
 
         
@@ -81,10 +82,12 @@ class MQTTClient:
                         self.received_seqs.add(seq)
                         self.checksum += sum(payload[i:i+12])
                         self.data.append(value)
+                        print(value)
                         count += 1
                         sample_count +=1
                         self.buffer= value
                         current_time = time.time()
+
 
 
                         
@@ -316,7 +319,7 @@ class MainWindow(QWidget):
         self.rate_slider.setMaximum(10000)
         self.rate_slider.setValue(100)
         self.rate_slider.valueChanged.connect(self.on_rate_slider_change)
-        self.rate_slider_label = QtWidgets.QLabel(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
+        self.sampling_rate_label = QtWidgets.QLabel(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
         
         
 
@@ -360,7 +363,7 @@ class MainWindow(QWidget):
         experiment_layout.addWidget(self.stop_button)
         
 
-        rate_layout.addWidget(self.rate_slider_label)
+        rate_layout.addWidget(self.sampling_rate_label)
         rate_layout.addWidget(self.low_sample_rate_btn)
         rate_layout.addWidget(self.med_sample_rate_btn)
         rate_layout.addWidget(self.high_sample_rate_btn)
@@ -400,7 +403,7 @@ class MainWindow(QWidget):
     def update_sample_rate_display(self):
         global count
         
-        self.rate_slider_label.setText(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
+        self.sampling_rate_label.setText(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
 
     def update_checksum_display(self):
         result = self.mqtt_client.compare_checksum()
@@ -415,7 +418,7 @@ class MainWindow(QWidget):
     def update_plot(self):
         x = np.arange(len(self.mqtt_client.data)) * (1 / 10000)
         self.curve.setData(self.mqtt_client.data)
-        self.plot_widget.setYRange(-1, 4096, padding=0) # change if using adc or sine simu.
+        self.plot_widget.setYRange(-1, 300, padding=0) # change if using adc or sine simu.
         self.plot_widget.setLabel('left', 'ADC Value')
         
 
@@ -424,6 +427,7 @@ class MainWindow(QWidget):
         self.update_checksum_display()
         self.update_sample_rate_display()
         self.rtt_label.setText(f"RTT:{self.mqtt_client.rtt:.2f}ms")
+        
         
         #print(f"Current RTT in GUI update: {self.mqtt_client.rtt}")
 
@@ -442,7 +446,7 @@ class MainWindow(QWidget):
         self.mqtt_client.client.publish("experiment/slider", value)
     
     def on_rate_slider_change(self, value):
-        self.rate_slider_label.setText(f"Sampling rate: {value} Hz")
+        self.sampling_rate_label.setText(f"Sampling rate: {value} Hz")
         self.mqtt_client.client.publish("experiment/rateslider", value)
 
     def start_experiment(self):
@@ -483,8 +487,11 @@ class MainWindow(QWidget):
         record = 0
         self.recording_label.setText("Stopped Recording")
         self.set_recording_led(record)
+
+        #flushes whats left in the buffer (if smaller than the batch size)
         if self.mqtt_client.record_buffer:
             self.mqtt_client.save_to_file()
+
         self.show_temp_message(self.number_of_experiments_label,f"Saved to Experiments/Experiment{past_experiments}.csv")
 
     def show_temp_message(self,label,temp_msg,show_duration = 2000):
