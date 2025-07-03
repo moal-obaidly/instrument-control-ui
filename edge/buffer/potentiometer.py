@@ -36,8 +36,7 @@ def rtt():
 
         client.publish("experiment/rtt",time.time())
         # CPU usage in %
-        cpu_usage = psutil.cpu_percent(interval=1)
-
+        cpu_usage = psutil.cpu_percent(interval=0)
         # RAM usage in %
         ram_usage = psutil.virtual_memory().percent
 
