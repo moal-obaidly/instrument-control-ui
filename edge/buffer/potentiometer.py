@@ -6,6 +6,9 @@ import threading
 import struct
 from collections import deque
 import serial
+import psutil
+
+
 
 # MQTT setup
 broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
@@ -32,6 +35,14 @@ def rtt():
     while True:
 
         client.publish("experiment/rtt",time.time())
+        # CPU usage in %
+        cpu_usage = psutil.cpu_percent(interval=1)
+
+        # RAM usage in %
+        ram_usage = psutil.virtual_memory().percent
+
+        print(f"CPU Usage: {cpu_usage}%")
+        print(f"RAM Usage: {ram_usage}%")
         time.sleep(5)
 
 def publish_buffer():
