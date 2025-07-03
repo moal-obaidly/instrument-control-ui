@@ -5,6 +5,7 @@ import zmq
 import serial
 import struct
 from collections import deque
+import psutil
 
 # globals
 running = False
@@ -44,6 +45,15 @@ sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/reset")
 def rtt():
     while running:
         rtt_socket.send_string(f"experiment/rtt {time.time()}")
+        # CPU usage in %
+        cpu_usage = psutil.cpu_percent(interval=0)
+        # RAM usage in %
+        ram_usage = psutil.virtual_memory().percent
+
+        print(f"CPU Usage: {cpu_usage}%")
+        print(f"RAM Usage: {ram_usage}%")
+        rtt_socket.send_string(f"experiment/system/cpu {cpu_usage}")
+        rtt_socket.send_string(f"experiment/system/ram {ram_usage}")
         time.sleep(1)
 
 
