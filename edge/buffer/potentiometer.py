@@ -44,7 +44,7 @@ def rtt():
         print(f"RAM Usage: {ram_usage}%")
         client.publish("experiment/system/cpu", str(cpu_usage))
         client.publish("experiment/system/ram", str(ram_usage))
-        time.sleep(5)
+        time.sleep(1)
 
 def publish_buffer():
     global topic,batches_sent,singles_sent,running
