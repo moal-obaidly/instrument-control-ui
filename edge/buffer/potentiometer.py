@@ -43,6 +43,8 @@ def rtt():
 
         print(f"CPU Usage: {cpu_usage}%")
         print(f"RAM Usage: {ram_usage}%")
+        client.publish("experiment/system/cpu", str(cpu_usage))
+        client.publish("experiment/system/ram", str(ram_usage))
         time.sleep(5)
 
 def publish_buffer():
