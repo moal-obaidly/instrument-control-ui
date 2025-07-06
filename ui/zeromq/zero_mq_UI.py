@@ -9,6 +9,10 @@ import zmq
 import threading
 import struct
 import os
+from zplot_signal import plot_experiment
+import matplotlib 
+matplotlib.use("Qt5Agg") 
+import matplotlib.pyplot as plt
 
 from collections import deque
 import sys
@@ -108,6 +112,8 @@ class zmq_Subscriber:
                             print(payload)
                         except Exception as e:
                             print("Bad message:", payload, "| Error:", e)
+
+                    
                                 
                             
     
@@ -187,7 +193,7 @@ class MainWindow(QWidget):
         # self.poller = zmq.Poller()
         # self.poller.register(self.socket, zmq.POLLIN)
 
-        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.34:5556","experiment/")#34 for rpi5, 33 for rpi ethernet, 82 for pi4
+        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.34:5556","experiment/")#34 for rpi5, 33 for rpi ethernet, 82 for pi4 # tailscale: 100.113.46.57
         self.zmq_pub_client = zmq_Publisher()
 
         self.rtt_client = zmq_Subscriber("tcp://192.168.1.34:5558","")
@@ -232,7 +238,7 @@ class MainWindow(QWidget):
         self.med_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 1000 Hz")
         self.med_sample_rate_btn.clicked.connect(self.med_sample_rate)
 
-        self.high_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 10000 Hz")
+        self.high_sample_rate_btn = QtWidgets.QPushButton("View last experiment")
         self.high_sample_rate_btn.clicked.connect(self.high_sample_rate)
 
         self.start_record_btn = QtWidgets.QPushButton("Start recording data")
@@ -367,6 +373,8 @@ class MainWindow(QWidget):
     #     self.last_values_label.setText(f"Last 5 Values:\n{text}")
 
     def rtt(self):
+        self.publisher_cpu_usage = 0
+        self.publisher_ram_usage = 0
         while True:
             try:
                 msg = self.rtt_client.socket.recv_string(flags=zmq.NOBLOCK)
@@ -379,7 +387,19 @@ class MainWindow(QWidget):
                     self.zmq_pub_client.socket.send_string(f"experiment/rtt/response {payload}")
                 elif topic == "experiment/rtt/display":
                     self.rtt_client.rtt = float(payload)
-                    self.rtt_label.setText(f"RTT: {self.rtt_client.rtt:.2f} ms")
+                    self.rtt_label.setText(f"RTT: {self.rtt_client.rtt:.2f} ms          CPU:{self.publisher_cpu_usage}%        Ram:{self.publisher_ram_usage}%")
+
+                elif topic == "experiment/system/cpu":
+                        try:
+                            self.publisher_cpu_usage = float(payload)   
+                        except Exception as e:
+                            print("Bad message:", payload, "| Error:", e)
+
+                elif topic == "experiment/system/ram":
+                        try:
+                            self.publisher_ram_usage = float(payload)
+                        except Exception as e:
+                            print("Bad message:", payload, "| Error:", e)
             except zmq.Again:
                 
                 time.sleep(0.01)
@@ -471,7 +491,9 @@ class MainWindow(QWidget):
         self.zmq_pub_client.socket.send_string("experiment/rate 1000")
 
     def high_sample_rate(self):
-        self.zmq_pub_client.socket.send_string("experiment/rate 10000")
+        # self.zmq_pub_client.socket.send_string("experiment/rate 10000")
+        experiment_file = f"{current_working_directory}/Experiments/Experiment{past_experiments}.csv"
+        plot_experiment(experiment_file)
     
     def start_record(self): 
         global record, csv_status,past_experiments
