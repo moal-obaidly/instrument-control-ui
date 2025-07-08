@@ -203,16 +203,11 @@ class MQTTClient:
             try:
                 self.publisher_cpu_usage = float(msg.payload.decode())
                 ####prints ui cpu and ram
-                cpu_usage = psutil.cpu_percent(interval=0)
-                # RAM usage in %
-                ram_usage = psutil.virtual_memory().percent
+                # cpu_usage = psutil.cpu_percent(interval=0)
+                # # RAM usage in %
+                # ram_usage = psutil.virtual_memory().percent
 
-                cpu_usage = psutil.cpu_percent(interval=0)
-                # RAM usage in %
-                ram_usage = psutil.virtual_memory().percent
-
-                print(f"CPU Usage: {cpu_usage}%")
-                print(f"RAM Usage: {ram_usage}%")
+                
 
                 # print(f"CPU Usage: {cpu_usage}%")
                 # print(f"RAM Usage: {ram_usage}%")
