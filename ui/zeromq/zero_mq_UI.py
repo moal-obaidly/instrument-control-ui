@@ -48,6 +48,7 @@ class zmq_Subscriber:
         self.buffer = 0
         self.checksum = 0
         self.expected_checksum = 0
+        self.ordering = True
         self.old_seq = 0
         self.received_seqs = set()
 
@@ -83,6 +84,14 @@ class zmq_Subscriber:
                             value,seq = struct.unpack('dI',payload[i:i+12]) 
                             if seq not in self.received_seqs:
                                 self.received_seqs.add(seq)
+                                if self.old_seq != 0:
+                                    if seq < self.old_seq:
+                                        print(f" Out of order packet: current seq = {seq}, previous = {self.old_seq}")
+                                        self.ordering = False
+                                    elif seq > self.old_seq + 1:
+                                        missed = seq - self.old_seq - 1
+                                        print(f"Missed {missed} packets (dropped between {self.old_seq} and {seq})")
+                                        self.ordering = False
                                 self.checksum += sum(payload[i:i+12])
                                 self.data.append(value)
                                 count += 1

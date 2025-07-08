@@ -46,6 +46,7 @@ class MQTTClient:
         self.rtt = 0
         self.buffer = 0
         self.checksum = 0
+        self.ordering = True
         self.expected_checksum = 0
         self.old_seq = 0
         self.received_seqs = set()
@@ -98,6 +99,16 @@ class MQTTClient:
                 #timerec = int(time.time()*1000.0)
                     if seq not in self.received_seqs:
                         self.received_seqs.add(seq)
+                        if self.old_seq != 0:
+                            if seq < self.old_seq:
+                                print(f" Out-of-order packet detected: current seq = {seq}, previous = {self.old_seq}")
+                                self.ordering = False
+                            elif seq > self.old_seq + 1:
+                                missed = seq - self.old_seq - 1
+                                print(f"Missed {missed} packets (dropped between {self.old_seq} and {seq})")
+                                self.ordering = False
+                           
+                        self.old_seq = seq
                         self.checksum += sum(payload[i:i+12])
                         self.data.append(value)
                         # print(value)
@@ -526,6 +537,7 @@ class MainWindow(QWidget):
         print(recent_values)
         print(self.mqtt_client.buffer)
         print(count)
+        print (f"Ordering = {self.mqtt_client.ordering}")
 
 
 # Different possible simulated sampling rates
