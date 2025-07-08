@@ -492,6 +492,7 @@ class MainWindow(QWidget):
         print(self.zmq_sub_client.buffer)
         print(count)
         print(self.zmq_sub_client.checksum)
+        print(f"ordering = {self.zmq_sub_client.ordering}")
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.zmq_pub_client.socket.send_string("experiment/rate 100")
