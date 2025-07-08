@@ -8,8 +8,14 @@ from datetime import datetime
 import struct
 import numpy as np
 import os
+from plot_signal import plot_experiment
+import matplotlib 
+matplotlib.use("Qt5Agg") 
+import matplotlib.pyplot as plt
+import psutil
 
 
+# experiment_file = f"{current_working_directory}/Experiments/Experiment12.csv"
 #globals
 record = 0
 csv_status = 1
@@ -49,19 +55,31 @@ class MQTTClient:
         #for saving to csv
         self.record_buffer = []
 
+        #system specs
+        self.publisher_cpu_usage = 0
+        self.publisher_ram_usage = 0
+
         
         
 
     def on_connect(self, client, userdata, flags, rc):
+
+
         print("Connected with result code", rc)
         client.subscribe("experiment/data",qos=0)
         client.subscribe("experiment/rtt")
         client.subscribe("experiment/rtt/display")
         client.subscribe("experiment/checksum")
+        client.subscribe("experiment/system/cpu")
+        client.subscribe("experiment/system/ram")
 
 
     def on_message(self, client, userdata, msg):
+
+
         global csv_status, count,past_experiments,sample_count
+
+
         if msg.topic == "experiment/data":
             try:                                                  #
                 # payload = msg.payload.decode()                  # with time sent 
@@ -149,6 +167,8 @@ class MQTTClient:
                 #     self.data.pop(0)
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
+
+
         elif msg.topic == "experiment/rtt":
             try:
                 payload = msg.payload.decode()
@@ -157,6 +177,7 @@ class MQTTClient:
 
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
+
         
         elif msg.topic == "experiment/rtt/display":
             try:
@@ -167,6 +188,7 @@ class MQTTClient:
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
 
+
         elif msg.topic == "experiment/checksum":
             try:
                 self.expected_checksum = int(msg.payload.decode())
@@ -175,8 +197,44 @@ class MQTTClient:
              
             except Exception as e:
                 print("Bad message:", msg.payload, "| Error:", e)
+
+            
+        elif msg.topic == "experiment/system/cpu":
+            try:
+                self.publisher_cpu_usage = float(msg.payload.decode())
+                ####prints ui cpu and ram
+                cpu_usage = psutil.cpu_percent(interval=0)
+                # RAM usage in %
+                ram_usage = psutil.virtual_memory().percent
+
+                cpu_usage = psutil.cpu_percent(interval=0)
+                # RAM usage in %
+                ram_usage = psutil.virtual_memory().percent
+
+                print(f"CPU Usage: {cpu_usage}%")
+                print(f"RAM Usage: {ram_usage}%")
+
+                # print(f"CPU Usage: {cpu_usage}%")
+                # print(f"RAM Usage: {ram_usage}%")
+                ####
+                # print(msg.payload)
+             
+            except Exception as e:
+                print("Bad message:", msg.payload, "| Error:", e)
+
+
+        elif msg.topic == "experiment/system/ram":
+            try:
+                self.publisher_ram_usage = float(msg.payload.decode())
+                
+                # print(msg.payload)
+             
+            except Exception as e:
+                print("Bad message:", msg.payload, "| Error:", e)
+
            
     def compare_checksum(self):
+
         
         if int(self.checksum) == self.expected_checksum:
             
@@ -184,8 +242,11 @@ class MQTTClient:
         else:
             
             return 0
+        
             
     def save_to_file(self):
+
+
         try:
             with open(f"Experiments/Experiment{past_experiments}.csv", "a") as f:
                 csv_status = 1
@@ -203,7 +264,9 @@ class MQTTClient:
     
 
     def start(self):
-        self.client.connect("192.168.1.82", 1883, 60) #.36 for laptop, .82 for rpi4
+
+
+        self.client.connect("192.168.1.82", 1883, 60) #.36 for laptop, .82 for rpi4   taliscale: 100.106.113.72
         self.client.loop_start()
 
 
@@ -267,7 +330,7 @@ class MainWindow(QWidget):
         self.med_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 1000 Hz")
         self.med_sample_rate_btn.clicked.connect(self.med_sample_rate)
 
-        self.high_sample_rate_btn = QtWidgets.QPushButton("Sampling rate: 10000 Hz")
+        self.high_sample_rate_btn = QtWidgets.QPushButton("View last experiment")
         self.high_sample_rate_btn.clicked.connect(self.high_sample_rate)
 
         self.start_record_btn = QtWidgets.QPushButton("Start recording data")
@@ -309,7 +372,7 @@ class MainWindow(QWidget):
         self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past  experiments: {past_experiments}")
 
 
-        self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms")
+        self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms       CPU:{self.mqtt_client.publisher_cpu_usage}%        Ram:{self.mqtt_client.publisher_ram_usage}%")
 
         
 
@@ -400,10 +463,12 @@ class MainWindow(QWidget):
         
         self.count_label.setText(f"Samples Received:\n{count}")
 
+
     def update_sample_rate_display(self):
         global count
         
         self.sampling_rate_label.setText(f"Current sampling rate: {self.mqtt_client.sample_rate}Hz")
+
 
     def update_checksum_display(self):
         result = self.mqtt_client.compare_checksum()
@@ -418,7 +483,7 @@ class MainWindow(QWidget):
     def update_plot(self):
         x = np.arange(len(self.mqtt_client.data)) * (1 / 10000)
         self.curve.setData(self.mqtt_client.data)
-        self.plot_widget.setYRange(-1, 300, padding=0) # change if using adc or sine simu.
+        self.plot_widget.setYRange(-1, 4096, padding=0) # change if using adc or sine simu.
         self.plot_widget.setLabel('left', 'ADC Value')
         
 
@@ -426,7 +491,7 @@ class MainWindow(QWidget):
         self.update_count_display()
         self.update_checksum_display()
         self.update_sample_rate_display()
-        self.rtt_label.setText(f"RTT:{self.mqtt_client.rtt:.2f}ms")
+        self.rtt_label.setText(f"RTT:{self.mqtt_client.rtt:.2f}ms       CPU:{self.mqtt_client.publisher_cpu_usage}%        Ram:{self.mqtt_client.publisher_ram_usage}%")
         
         
         #print(f"Current RTT in GUI update: {self.mqtt_client.rtt}")
@@ -441,18 +506,22 @@ class MainWindow(QWidget):
         self.mqtt_client.old_seq=0
         self.mqtt_client.received_seqs.clear()
 
+
     def on_slider_change(self, value):
         self.slider_label.setText(f"Frequency: {value}")
         self.mqtt_client.client.publish("experiment/slider", value)
+
     
     def on_rate_slider_change(self, value):
         self.sampling_rate_label.setText(f"Sampling rate: {value} Hz")
         self.mqtt_client.client.publish("experiment/rateslider", value)
 
+
     def start_experiment(self):
         self.mqtt_client.client.publish("experiment/control", "1",qos=1)
         self.reset_btn.setEnabled(False)
         self.mqtt_client.old_time = time.time()
+
 
     def stop_experiment(self):
         global count
@@ -462,15 +531,24 @@ class MainWindow(QWidget):
         print(recent_values)
         print(self.mqtt_client.buffer)
         print(count)
+
+
 # Different possible simulated sampling rates
+
+
     def low_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "100")
+
 
     def med_sample_rate(self):
         self.mqtt_client.client.publish("experiment/rate", "1000")
 
+
     def high_sample_rate(self):
-        self.mqtt_client.client.publish("experiment/rate", "10000")
+        # self.mqtt_client.client.publish("experiment/rate", "10000")
+        experiment_file = f"{current_working_directory}/Experiments/Experiment{past_experiments}.csv"
+        plot_experiment(experiment_file)
+
     
     def start_record(self): 
         global record, csv_status,past_experiments
@@ -481,6 +559,7 @@ class MainWindow(QWidget):
             self.set_recording_led(record)
         else:
             self.recording_label.setText("Failed to record")
+
 
     def stop_record(self): 
         global record
@@ -494,6 +573,7 @@ class MainWindow(QWidget):
 
         self.show_temp_message(self.number_of_experiments_label,f"Saved to Experiments/Experiment{past_experiments}.csv")
 
+
     def show_temp_message(self,label,temp_msg,show_duration = 2000):
         original_msg = label.text()
         label.setText(temp_msg)
@@ -506,6 +586,7 @@ class MainWindow(QWidget):
         new_index = (index + 1) % self.layout_stack.count()
         self.layout_stack.setCurrentIndex(new_index)
 
+
     def toggle_screen(self):
         global screen_size
         if self.isFullScreen():
@@ -514,6 +595,7 @@ class MainWindow(QWidget):
         else:
             self.showFullScreen()
             screen_size = 1
+
     
     def set_recording_led(self, recording):
         if record:
@@ -526,7 +608,7 @@ class MainWindow(QWidget):
         self.close()
         
     
-        
+######Compare plot and then subtract them from each other to calculate the error
 
 app = QApplication(sys.argv)
 # Main app
