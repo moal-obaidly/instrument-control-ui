@@ -458,7 +458,7 @@ class MainWindow(QWidget):
     def reset_graph(self):
         global count
         self.zmq_sub_client.data = []
-        self.zmq_pub_client.socket.send_string(f"experiment/reset {"1"}")
+        self.zmq_pub_client.socket.send_string(f"experiment/reset {1}")
         count = 0
         self.zmq_sub_client.checksum = 0
         self.zmq_sub_client.old_seq=0
