@@ -16,6 +16,7 @@ port = 1883
 topic = "experiment/data"
 
 # ADC UART setup
+#ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
 ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.000005)
 # Globals (remember to add to onMessage function)
 running = False
