@@ -420,7 +420,7 @@ def start_signal():
         buffer_thread = threading.Thread(target = publish_buffer, daemon=True)
         buffer_thread.start()
     while running:
-        signal = np.sin(2 * np.pi * freq * t)  # dynamically use current freq
+        signal = 4096*np.sin(2 * np.pi * freq * t)  # dynamically use current freq
         for value in signal:
             if not running:
                 break
