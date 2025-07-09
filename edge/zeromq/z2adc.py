@@ -22,7 +22,8 @@ seq_num = 1
 buffered_data = deque()
 #zmq setup
 context = zmq.Context()
-ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
+# ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
+ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.00005)
 
 # publisher that sends data
 pub_socket = context.socket(zmq.PUB)
