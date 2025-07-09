@@ -16,7 +16,7 @@ port = 1883
 topic = "experiment/data"
 
 # ADC UART setup
-ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
+ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.000005)
 # Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
@@ -31,7 +31,12 @@ seq_num = 1
 freq = 10
 rate = 100
 buffered_data = deque()
+##########################
+
+
 def rtt():
+
+
     while True:
 
         client.publish("experiment/rtt",time.time())
@@ -46,7 +51,11 @@ def rtt():
         client.publish("experiment/system/ram", str(ram_usage))
         time.sleep(1)
 
+
+
 def publish_buffer():
+
+
     global topic,batches_sent,singles_sent,running
     batch_size = 100
     
@@ -84,16 +93,16 @@ def publish_buffer():
                         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
                         for payload in reversed(batch):
                             buffered_data.appendleft(payload)
-                        time.sleep(0.0001)  # cpu safety
+                        time.sleep(0.000001)  # cpu safety
                     else:
                         batches_sent+=1
-                        time.sleep(0.0001)  # cpu safety
+                        time.sleep(0.000001)  # cpu safety
 
                 else:
                     # Re-buffer the batch
                     for payload in reversed(batch):
                         buffered_data.appendleft(payload)
-                    time.sleep(0.01)  # back off a little
+                    time.sleep(0.000001)  # back off a little
 
             # elif buffered_data:
             #     payload = buffered_data.pop(0)
@@ -141,6 +150,8 @@ def publish_buffer():
 
 
 def start_signal():
+
+
     global running, freq, rtt_thread, count, buffer_thread,checksum,seq_num
     t = np.linspace(0, 1, 1000)
     ser.reset_input_buffer()  # resets the uart buffer. so old values are cleared and it can start reading new ones(from when start is pressed)
@@ -202,6 +213,8 @@ def start_signal():
 
 
 def stop_signal():
+
+
     global running, count,singles_sent,batches_sent,checksum
     running = False
     print("Signal stopped")
@@ -215,6 +228,8 @@ def stop_signal():
 
 
 def on_connect(client, userdata, flags, rc):
+
+
     print("Connected:", rc)
     client.subscribe("experiment/control")
     client.subscribe("experiment/slider")
@@ -233,17 +248,21 @@ def on_connect(client, userdata, flags, rc):
 
         if client.is_connected():
             client.publish(topic, multi_payload,qos=1)
-            time.sleep(0.0001)  # prevent flooding
+            time.sleep(0.000001)  # prevent flooding
         # payload = buffered_data.pop(0)
         # client.publish(topic, payload)
     print("Sent buffered data!")
 
 
 def on_disconnect(client, userdata, rc):
+
+
     print("Disconnected! Buffering until reconnected.")
 
 
 def on_message(client, userdata, msg):
+
+
     global signal_thread, freq,rate,checksum,count,singles_sent,batches_sent,seq_num ,buffered_data
 
     command = msg.payload.decode()
@@ -300,7 +319,7 @@ def on_message(client, userdata, msg):
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect(broker, port, 2)
+client.connect(broker, port, keepalive=2)
 client.on_disconnect = on_disconnect
 
 client.loop_start()
