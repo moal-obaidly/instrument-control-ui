@@ -241,9 +241,10 @@ def on_connect(client, userdata, flags, rc):
 
 
     #check to see if buffer is empty. if not then send publish all that data
-    while len(buffered_data) > 100:
+    while len(buffered_data) > 0:
+        batch_size = min(100, len(buffered_data))
         print(f"{len(buffered_data)} left to send")
-        batch_size = 100
+        # batch_size = 100
         batch = [buffered_data.popleft() for i in range(batch_size)]
         multi_payload = b''.join(batch)
 
