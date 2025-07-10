@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use("Qt5Agg") 
 import matplotlib.pyplot as plt
 import psutil
+import qdarkstyle
 
 
 # experiment_file = f"{current_working_directory}/Experiments/Experiment12.csv"
@@ -46,6 +47,7 @@ class MQTTClient:
         self.rtt = 0
         self.buffer = 0
         self.checksum = 0
+        
         self.ordering = True
         self.expected_checksum = 0
         self.old_seq = 0
@@ -59,6 +61,8 @@ class MQTTClient:
         #system specs
         self.publisher_cpu_usage = 0
         self.publisher_ram_usage = 0
+        self.self_max_cpu_usage = 0
+        self.pub_max_cpu_usage = 0
 
         
         
@@ -214,9 +218,13 @@ class MQTTClient:
             try:
                 self.publisher_cpu_usage = float(msg.payload.decode())
                 ####prints ui cpu and ram
-                # cpu_usage = psutil.cpu_percent(interval=0)
-                # # RAM usage in %
-                # ram_usage = psutil.virtual_memory().percent
+                if self.pub_max_cpu_usage<self.publisher_cpu_usage:
+                    self.pub_max_cpu_usage = self.publisher_cpu_usage
+                cpu_usage = psutil.cpu_percent(interval=0)
+                # RAM usage in %
+                ram_usage = psutil.virtual_memory().percent
+                if cpu_usage>self.self_max_cpu_usage:
+                    self.self_max_cpu_usage = cpu_usage
 
                 
 
@@ -293,6 +301,10 @@ class MainWindow(QWidget):
         global record,screen_size,past_experiments
         screen_size = 0
         import pyqtgraph as pg
+        self.dark_mode_enabled = False
+
+
+
         super().__init__()
         self.setWindowTitle("Signal Monitor")
         if screen_size == 0:
@@ -409,6 +421,17 @@ class MainWindow(QWidget):
         self.close_screen_btn.setStyleSheet("background-color : red")
         self.toggle_screen_btn.setStyleSheet("background-color : yellow")
 
+        # Experiment selection dropdown
+        self.experiment_selector = QtWidgets.QComboBox()
+        self.experiment_selector.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+        self.experiment_selector.setMaxVisibleItems(10)
+        self.populate_experiment_list()
+        self.experiment_selector.setMaxVisibleItems(10) 
+        
+
+        self.experiment_selector.currentIndexChanged.connect(self.load_selected_experiment)
+
+
 
 
 
@@ -433,8 +456,11 @@ class MainWindow(QWidget):
         
 
         rate_layout.addWidget(self.sampling_rate_label)
-        rate_layout.addWidget(self.low_sample_rate_btn)
-        rate_layout.addWidget(self.med_sample_rate_btn)
+        # rate_layout.addWidget(self.low_sample_rate_btn)
+        # rate_layout.addWidget(self.med_sample_rate_btn)
+        rate_layout.addWidget(QtWidgets.QLabel("Select experiment:"))
+        rate_layout.addWidget(self.experiment_selector)
+
         rate_layout.addWidget(self.high_sample_rate_btn)
         rate_layout.addWidget(self.toggle_screen_btn)
         rate_layout.addWidget(self.close_screen_btn)
@@ -463,6 +489,25 @@ class MainWindow(QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot)
         self.timer.start(10)
+
+
+
+    def populate_experiment_list(self):
+        self.experiment_selector.clear()
+        files = sorted(os.listdir(experiments_folder))
+        for f in files:
+            if f.startswith("Experiment") and f.endswith(".csv"):
+                self.experiment_selector.addItem(f)
+
+
+    def load_selected_experiment(self):
+        filename = self.experiment_selector.currentText()
+        if filename:
+            filepath = os.path.join(experiments_folder, filename)
+            print(f"Loading: {filepath}")
+            plot_experiment(filepath)
+
+
 
     def update_count_display(self):
         global count
@@ -538,6 +583,8 @@ class MainWindow(QWidget):
         print(self.mqtt_client.buffer)
         print(count)
         print (f"Ordering = {self.mqtt_client.ordering}")
+        print(f"UI max cpu usage:{self.mqtt_client.self_max_cpu_usage}")
+        print(f"publisher max cpu usage:{self.mqtt_client.pub_max_cpu_usage}")
 
 
 # Different possible simulated sampling rates
@@ -589,9 +636,15 @@ class MainWindow(QWidget):
 
 
     def toggle_layout(self):
-        index = self.layout_stack.currentIndex()
-        new_index = (index + 1) % self.layout_stack.count()
-        self.layout_stack.setCurrentIndex(new_index)
+        # index = self.layout_stack.currentIndex()
+        # new_index = (index + 1) % self.layout_stack.count()
+        # self.layout_stack.setCurrentIndex(new_index)
+        if not self.dark_mode_enabled:
+            app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+            self.dark_mode_enabled = True
+        else:
+            app.setStyleSheet("")  # Reset to default
+            self.dark_mode_enabled = False
 
 
     def toggle_screen(self):
