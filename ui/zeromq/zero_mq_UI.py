@@ -13,6 +13,7 @@ from zplot_signal import plot_experiment
 import matplotlib 
 matplotlib.use("Qt5Agg") 
 import matplotlib.pyplot as plt
+import psutil
 
 from collections import deque
 import sys
@@ -384,6 +385,8 @@ class MainWindow(QWidget):
     def rtt(self):
         self.publisher_cpu_usage = 0
         self.publisher_ram_usage = 0
+        self.pub_max_cpu_usage = 0
+        self.self_max_cpu_usage = 0
         while True:
             try:
                 msg = self.rtt_client.socket.recv_string(flags=zmq.NOBLOCK)
@@ -400,7 +403,15 @@ class MainWindow(QWidget):
 
                 elif topic == "experiment/system/cpu":
                         try:
-                            self.publisher_cpu_usage = float(payload)   
+                            self.publisher_cpu_usage = float(payload) 
+                            if self.pub_max_cpu_usage<self.publisher_cpu_usage:
+                                self.pub_max_cpu_usage = self.publisher_cpu_usage 
+                            cpu_usage = psutil.cpu_percent(interval=0)
+                
+                            ram_usage = psutil.virtual_memory().percent
+                            if cpu_usage>self.self_max_cpu_usage:
+                                self.self_max_cpu_usage = cpu_usage 
+
                         except Exception as e:
                             print("Bad message:", payload, "| Error:", e)
 
@@ -493,6 +504,8 @@ class MainWindow(QWidget):
         print(count)
         print(self.zmq_sub_client.checksum)
         print(f"ordering = {self.zmq_sub_client.ordering}")
+        print(f"UI max cpu usage:{self.self_max_cpu_usage}")
+        print(f"publisher max cpu usage:{self.pub_max_cpu_usage}")
 # Different possible simulated sampling rates
     def low_sample_rate(self):
         self.zmq_pub_client.socket.send_string("experiment/rate 100")
