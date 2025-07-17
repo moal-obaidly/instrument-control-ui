@@ -173,7 +173,7 @@ def start_signal():
                 adc_value = struct.unpack('H', line)[0]
                 
                 
-                payload = struct.pack('dI', adc_value, seq_num)  # pack float + seq_num
+                payload = struct.pack('HI', adc_value, seq_num)  # pack float + seq_num
                 seq_num += 1
                 checksum += sum(payload)
                 buffered_data.append(payload)
