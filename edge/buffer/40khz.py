@@ -166,24 +166,26 @@ def start_signal():
         buffer_thread = threading.Thread(target = publish_buffer, daemon=True)
         buffer_thread.start()
     while running:
-        line = ser.read(2)
-        
-        if line and len(line) == 2:
-            try:
-                adc_value = struct.unpack('H', line)[0]
-                print(f" ADC: {adc_value}")
-                
-                
-                payload = struct.pack('HI', adc_value, seq_num)  # pack float + seq_num
-                seq_num += 1
-                checksum += sum(payload)
-                buffered_data.append(payload)
-                count += 1
-                # print(f"RAW LINE: {line}")
-
+        sync = ser.read(1)
+        if sync == b'\xAA':
+            line = ser.read(2)
+            if len(line) == 2:
+            
+                try:
+                    adc_value = struct.unpack('H', line)[0]
+                    print(f" ADC: {adc_value}")
                     
-            except Exception as e:
-                print("Error decoding ADC value:", e)
+                    
+                    payload = struct.pack('HI', adc_value, seq_num)  # pack float + seq_num
+                    seq_num += 1
+                    checksum += sum(payload)
+                    buffered_data.append(payload)
+                    count += 1
+                    # print(f"RAW LINE: {line}")
+
+                        
+                except Exception as e:
+                    print("Error decoding ADC value:", e)
     
     # global running, freq, rtt_thread, count, buffer_thread, checksum, seq_num
     # running = True
