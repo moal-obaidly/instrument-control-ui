@@ -168,13 +168,13 @@ def start_signal():
     while running:
         sync = ser.read(1)
         if sync == b'\xAA':
-            print ("hi")
+            
             line = ser.read(2)
             if len(line) == 2:
             
                 try:
                     adc_value = struct.unpack('H', line)[0]
-                    print(f" ADC: {adc_value}")
+                    
                     
                     
                     payload = struct.pack('HI', adc_value, seq_num)  # pack float + seq_num
