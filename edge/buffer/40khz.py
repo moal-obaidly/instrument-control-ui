@@ -17,7 +17,7 @@ topic = "experiment/data"
 
 # ADC UART setup
 #ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
-ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.000005)
+ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.0000005)
 # Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
@@ -169,11 +169,11 @@ def start_signal():
         sync = ser.read(1)
         if sync == b'\xAA':
             
-            line = ser.read(2)
-            if len(line) == 2:
+            packet = ser.read(3)
+            if len(packet) == 3 and packet[0] == 0xAA:
             
                 try:
-                    adc_value = struct.unpack('H', line)[0]
+                    adc_value = struct.unpack('H', packet[1:])[0]
                     
                     
                     
