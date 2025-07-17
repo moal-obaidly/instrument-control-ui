@@ -168,6 +168,7 @@ def start_signal():
     while running:
         sync = ser.read(1)
         if sync == b'\xAA':
+            print ("hi")
             line = ser.read(2)
             if len(line) == 2:
             
