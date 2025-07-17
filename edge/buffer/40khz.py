@@ -166,8 +166,8 @@ def start_signal():
         buffer_thread = threading.Thread(target = publish_buffer, daemon=True)
         buffer_thread.start()
     while running:
-        sync = ser.read(1)
-        if sync == b'\xAA':
+        # sync = ser.read(1)
+        # if sync == b'\xAA':
             
             packet = ser.read(3)
             if len(packet) == 3 and packet[0] == 0xAA:
