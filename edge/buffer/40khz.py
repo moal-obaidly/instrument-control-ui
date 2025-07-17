@@ -167,9 +167,7 @@ def start_signal():
         buffer_thread.start()
     while running:
         line = ser.read(2)
-        raw = ser.read(2)
-        print("Raw bytes:", raw)
-        print("Unpacked:", struct.unpack('f', raw))
+        
         if line and len(line) == 2:
             try:
                 adc_value = struct.unpack('H', line)[0]
