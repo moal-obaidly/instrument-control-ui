@@ -11,7 +11,7 @@ import psutil
 
 
 # MQTT setup
-broker = "192.168.1.82" #.36 for laptop, .82 for rpi4
+broker = "100.106.113.72" #.36 for laptop, .82 for rpi4, 100.106.113.72
 port = 1883
 topic = "experiment/data"
 
