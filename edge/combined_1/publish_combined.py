@@ -27,7 +27,7 @@ zmq_pub_socket.bind("tcp://*:5556")
 
 # ADC UART setup
 #ser = serial.Serial('/dev/ttyAMA0', 1000000, timeout=0.0001)
-ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.00005)
+ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.000005)
 # Globals (remember to add to onMessage function)
 running = False
 signal_thread = None
