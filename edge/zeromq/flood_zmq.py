@@ -1,45 +1,34 @@
 import zmq
-import os
 import time
-import psutil
+import struct
 
-# --- Config ---------------------------------------------------------------
-PUB_PORT      = 5556
-PAYLOAD_SIZE  = 1024      # Adjust this (e.g., 64, 256, 1024, 32000)
-DURATION      = 30        # seconds to run
-total_bytes   = 0
-# --------------------------------------------------------------------------
+SAMPLE_RATE = 100_000              # 100 kHz
+PAYLOAD_SIZE = 12                  # 1 sample = 12 bytes (double + int)
+DURATION = 30                      # seconds
+PUB_PORT = 5556
 
-# --- Setup ZMQ PUB socket -------------------------------------------------
 context = zmq.Context()
 socket  = context.socket(zmq.PUB)
-socket.setsockopt(zmq.SNDHWM, 100)       # Back-pressure: 100-message buffer
+socket.setsockopt(zmq.SNDHWM, 1000)
 socket.bind(f"tcp://*:{PUB_PORT}")
+time.sleep(1.0)  # Give subscriber time to connect
 
-# --- Build payload ONCE ---------------------------------------------------
-payload = os.urandom(PAYLOAD_SIZE)       # or use b'\0' * PAYLOAD_SIZE
+interval = 1.0 / SAMPLE_RATE
+sample = struct.pack('dI', 123.456, 1)   # any sample
+start = time.perf_counter()
+sent = 0
 
-print(f"Sending {PAYLOAD_SIZE}-byte messages for {DURATION}s on tcp://*:{PUB_PORT}")
+print(f"Sending at 100 kHz for {DURATION}s…")
 
-# --- Send loop ------------------------------------------------------------
-start_time = time.time()
-last_log   = start_time
-sent_bytes = 0
+while time.perf_counter() - start < DURATION:
+    now = time.perf_counter()
+    socket.send(sample, copy=False)
+    sent += len(sample)
 
-while time.time() - start_time < DURATION:
-    # Blocking send with zero-copy
-    socket.send(payload, copy=False)
+    # Wait until next tick
+    elapsed = time.perf_counter() - now
+    sleep_time = interval - elapsed
+    if sleep_time > 0:
+        time.sleep(sleep_time)
 
-    sent_bytes  += PAYLOAD_SIZE
-    total_bytes += PAYLOAD_SIZE
-
-    now = time.time()
-    if now - last_log >= 5:
-        throughput_kbps = sent_bytes / (now - last_log) / 1000
-        print(f"[{time.strftime('%H:%M:%S')}] "
-              f"Throughput: {throughput_kbps:,.2f} KB/s | RAM: {psutil.virtual_memory().percent}%")
-        sent_bytes = 0
-        last_log   = now
-
-print("Done.")
-print(f"TOTAL SENT:     {total_bytes:,d} bytes")
+print(f"Done. Sent {sent:,} bytes ({sent / DURATION / 1e6:.2f} MB/s)")
