@@ -59,7 +59,7 @@ def publish_buffer():
 
 
     global topic,batches_sent,singles_sent,running
-    batch_size = 100
+    batch_size = 1
     
 
     while True:
@@ -151,7 +151,7 @@ def publish_buffer():
         
 
 def start_signal():
-    global running, freq, rtt_thread, count, buffer_thread, checksum, seq_num
+    global running, buffer_thread, rtt_thread, seq_num, checksum, count
 
     running = True
     if rtt_thread is None:
@@ -161,19 +161,16 @@ def start_signal():
         buffer_thread = threading.Thread(target=publish_buffer, daemon=True)
         buffer_thread.start()
 
-    target_rate = 20000  # 20 kHz
-    interval = 1.0 / target_rate
-    print(f"Simulating {target_rate:,} samples/sec...")
+    BATCH_SIZE = 512  # change this to test different sizes
+    payload = struct.pack('dI', 123.456, 1)  # 12 bytes
+    message = payload * BATCH_SIZE          # prebuilt message = 6144 bytes
+
+    print(f"Flooding {BATCH_SIZE} samples/batch = {len(message)} bytes")
 
     while running:
-        adc_value = random.uniform(0, 4095)
-        payload = struct.pack('dI', adc_value, seq_num)
-        seq_num += 1
-        checksum += sum(payload)
-        buffered_data.append(payload)
-        count += 1
+        buffered_data.append(message)
+        count += BATCH_SIZE
 
-        time.sleep(interval)  # Maintain sample rate
 
     
     # global running, freq, rtt_thread, count, buffer_thread, checksum, seq_num
