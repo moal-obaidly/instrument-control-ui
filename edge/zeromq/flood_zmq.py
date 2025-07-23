@@ -4,6 +4,7 @@ import random
 
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
+socket.setsockopt(zmq.SNDHWM, 0)
 socket.bind("tcp://*:5556")
 
 PAYLOAD_SIZES = [64, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
