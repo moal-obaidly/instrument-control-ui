@@ -28,7 +28,7 @@ sent_bytes = 0
 while time.time() - start_time < DURATION:
     try:
         # copy=False avoids an internal memcpy
-        socket.send(payload, flags=zmq.NOBLOCK | zmq.COPY_FALSE)
+        socket.send(payload, flags=zmq.NOBLOCK, copy=False)
         sent_bytes += PAYLOAD_SIZE
     except zmq.Again:                    # PUB queue is full → short back-off
         time.sleep(0.0005)
