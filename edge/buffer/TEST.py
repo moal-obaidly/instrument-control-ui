@@ -15,7 +15,7 @@ RTT_RESPONSE_TOPIC = "experiment/rtt/response"
 CPU_TOPIC = "experiment/system/cpu"
 RAM_TOPIC = "experiment/system/ram"
 
-SAMPLES_PER_BATCH = 100  # 100 × 12B = 1200 bytes
+SAMPLES_PER_BATCH = 10000  # 100 × 12B = 1200 bytes
 DURATION = 90  # seconds to flood for
 
 # --- MQTT Setup ---
