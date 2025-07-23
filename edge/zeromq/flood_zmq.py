@@ -7,6 +7,7 @@ import psutil
 PUB_PORT      = 5556
 PAYLOAD_SIZE  = 1024      # 64, 256, 1024, …
 DURATION      = 30        # seconds to run
+total_bytes = 0
 # --------------------------------------------------------------------------
 
 # --- Setup ZMQ PUB socket -------------------------------------------------
@@ -30,6 +31,7 @@ while time.time() - start_time < DURATION:
         # copy=False avoids an internal memcpy
         socket.send(payload, copy=False)
         sent_bytes += PAYLOAD_SIZE
+        total_bytes  += PAYLOAD_SIZE
     except zmq.Again:                    # PUB queue is full → short back-off
         time.sleep(0.0005)
 
@@ -42,3 +44,4 @@ while time.time() - start_time < DURATION:
         last_log   = now
 
 print("Done.")
+print (total_bytes)
