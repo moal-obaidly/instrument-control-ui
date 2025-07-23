@@ -1,32 +1,32 @@
-import time
 import zmq
+import struct
 import random
+import time
 
+# --- Configuration ---
+ADDRESS = "tcp://*:5556"  
+PAYLOAD_SIZE = 1024  # <-- Set this to desired size in bytes
+DURATION = 90  # seconds to run
+
+# --- Setup ---
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
 socket.setsockopt(zmq.SNDHWM, 0)
-socket.bind("tcp://*:5556")
+socket.bind(ADDRESS)
 
-PAYLOAD_SIZES = [64, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
-DURATION = 10  # seconds
+seq = 1
+dummy_data_size = PAYLOAD_SIZE - 12
+dummy_data = bytearray([random.randint(0, 255) for _ in range(dummy_data_size)])
 
-# Warm up
-time.sleep(1)
+print(f"\nSending {PAYLOAD_SIZE}-byte payloads for {DURATION}s...")
+start = time.time()
+sent = 0
 
-for size in PAYLOAD_SIZES:
-    payload = bytes(random.getrandbits(8) for _ in range(size))
-    start = time.time()
-    count = 0
+while time.time() - start < DURATION:
+    val = random.uniform(0, 4095)
+    packed = struct.pack('dI', val, seq) + dummy_data
+    socket.send(packed)
+    seq += 1
+    sent += 1
 
-    print(f"Testing {size}B payload...")
-
-    while time.time() - start < DURATION:
-        socket.send(payload)
-        count += 1
-
-    total_bytes = count * size
-    throughput_kbps = (total_bytes / DURATION) / 1000
-    print(f"{size}B payload: {throughput_kbps:.2f} KB/s")
-
-socket.close()
-context.term()
+print(f"Sent {sent} messages of {PAYLOAD_SIZE} bytes")
