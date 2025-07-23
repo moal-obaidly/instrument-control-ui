@@ -1,23 +1,23 @@
 import zmq
-import os           # ← for os.urandom
+import os
 import time
 import psutil
 
 # --- Config ---------------------------------------------------------------
 PUB_PORT      = 5556
-PAYLOAD_SIZE  = 1024      # 64, 256, 1024, …
+PAYLOAD_SIZE  = 1024      # Adjust this (e.g., 64, 256, 1024, 32000)
 DURATION      = 30        # seconds to run
-total_bytes = 0
+total_bytes   = 0
 # --------------------------------------------------------------------------
 
 # --- Setup ZMQ PUB socket -------------------------------------------------
 context = zmq.Context()
 socket  = context.socket(zmq.PUB)
-socket.setsockopt(zmq.SNDHWM, 100)      # high-water mark
+socket.setsockopt(zmq.SNDHWM, 100)       # Back-pressure: 100-message buffer
 socket.bind(f"tcp://*:{PUB_PORT}")
 
-# --- Build the payload ONCE ----------------------------------------------
-payload = os.urandom(PAYLOAD_SIZE)       # use b'\0' * PAYLOAD_SIZE for zeros
+# --- Build payload ONCE ---------------------------------------------------
+payload = os.urandom(PAYLOAD_SIZE)       # or use b'\0' * PAYLOAD_SIZE
 
 print(f"Sending {PAYLOAD_SIZE}-byte messages for {DURATION}s on tcp://*:{PUB_PORT}")
 
@@ -27,13 +27,11 @@ last_log   = start_time
 sent_bytes = 0
 
 while time.time() - start_time < DURATION:
-    try:
-        # copy=False avoids an internal memcpy
-        socket.send(payload, copy=False)
-        sent_bytes += PAYLOAD_SIZE
-        total_bytes  += PAYLOAD_SIZE
-    except zmq.Again:                    # PUB queue is full → short back-off
-        time.sleep(0.0005)
+    # Blocking send with zero-copy
+    socket.send(payload, copy=False)
+
+    sent_bytes  += PAYLOAD_SIZE
+    total_bytes += PAYLOAD_SIZE
 
     now = time.time()
     if now - last_log >= 5:
@@ -44,4 +42,4 @@ while time.time() - start_time < DURATION:
         last_log   = now
 
 print("Done.")
-print (total_bytes)
+print(f"TOTAL SENT:     {total_bytes:,d} bytes")
