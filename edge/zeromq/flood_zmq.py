@@ -2,31 +2,56 @@ import zmq
 import struct
 import random
 import time
+import psutil
 
-# --- Configuration ---
-ADDRESS = "tcp://*:5556"  
-PAYLOAD_SIZE = 1024  # <-- Set this to desired size in bytes
-DURATION = 90  # seconds to run
+# --- Config ---
+PUB_PORT = 5556
+PAYLOAD_SIZE = 1024  # Adjust this (e.g., 64, 256, 1024, etc.)
+DURATION = 30        # Run for this many seconds
+BATCH_SIZE = PAYLOAD_SIZE // 12  # One sample = 12 bytes (double + int)
 
-# --- Setup ---
+# --- Setup ZMQ PUB socket ---
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
-socket.setsockopt(zmq.SNDHWM, 0)
-socket.bind(ADDRESS)
 
+# Set high water mark to prevent memory overload
+socket.setsockopt(zmq.SNDHWM, 1000)
+
+socket.bind(f"tcp://*:{PUB_PORT}")
+
+print(f"Sending {PAYLOAD_SIZE}-byte messages for {DURATION}s on tcp://*:{PUB_PORT}")
+
+# --- Send loop ---
 seq = 1
-dummy_data_size = PAYLOAD_SIZE - 12
-dummy_data = bytearray([random.randint(0, 255) for _ in range(dummy_data_size)])
+checksum = 0
+start_time = time.time()
+sent_bytes = 0
+last_log = time.time()
 
-print(f"\nSending {PAYLOAD_SIZE}-byte payloads for {DURATION}s...")
-start = time.time()
-sent = 0
+while time.time() - start_time < DURATION:
+    batch = []
+    for _ in range(BATCH_SIZE):
+        value = random.uniform(0, 4095)
+        packed = struct.pack('dI', value, seq)
+        batch.append(packed)
+        checksum += sum(packed)
+        seq += 1
 
-while time.time() - start < DURATION:
-    val = random.uniform(0, 4095)
-    packed = struct.pack('dI', val, seq) + dummy_data
-    socket.send(packed)
-    seq += 1
-    sent += 1
+    payload = b''.join(batch)
 
-print(f"Sent {sent} messages of {PAYLOAD_SIZE} bytes")
+    try:
+        socket.send(payload, flags=zmq.NOBLOCK)
+        sent_bytes += len(payload)
+    except zmq.Again:
+        print("Buffer full! Dropping batch...")
+        time.sleep(0.001)  # back off if overwhelmed
+
+    # Throughput log every 5 seconds
+    now = time.time()
+    if now - last_log >= 5:
+        throughput_kbps = sent_bytes / (now - last_log) / 1000
+        print(f"[{time.strftime('%H:%M:%S')}] Throughput: {throughput_kbps:.2f} KB/s | RAM: {psutil.virtual_memory().percent}%")
+        sent_bytes = 0
+        last_log = now
+
+print("Done. Final checksum:", checksum)
