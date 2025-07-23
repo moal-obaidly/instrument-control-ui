@@ -162,7 +162,7 @@ def start_signal():
         buffer_thread.start()
 
     BATCH_SIZE = 512  # change this to test different sizes
-    payload = struct.pack('dI', 123.456, 1)  # 12 bytes
+    payload = struct.pack('dI', 123.456, seq_num)  # 12 bytes
     message = payload * BATCH_SIZE          # prebuilt message = 6144 bytes
 
     print(f"Flooding {BATCH_SIZE} samples/batch = {len(message)} bytes")
@@ -170,6 +170,7 @@ def start_signal():
     while running:
         buffered_data.append(message)
         count += BATCH_SIZE
+        seq_num+=1
 
 
     
