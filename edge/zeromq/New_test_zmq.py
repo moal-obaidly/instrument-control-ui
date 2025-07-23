@@ -139,10 +139,10 @@ def stop_signal():
     running = False
     print("Signal stopped")
     time.sleep(0.1)
-    print(count)
+    print(f"total sent: {count}")
     print(f"batches sent: {batches_sent}")
     print(f"singles sent: {singles_sent}")
-    print(checksum)
+    print(f"checksum: {checksum}")
     pub_socket.send_multipart([b"experiment/checksum", str(checksum).encode()])
 
 def ui_controls():
