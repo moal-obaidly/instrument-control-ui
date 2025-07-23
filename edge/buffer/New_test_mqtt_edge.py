@@ -177,6 +177,7 @@ def start_signal():
         message = b''.join(batch)
         buffered_data.append(message)
         count += BATCH_SIZE
+        time.sleep(0.0001) 
 
 
 
