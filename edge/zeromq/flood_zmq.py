@@ -12,7 +12,7 @@ DURATION      = 30        # seconds to run
 # --- Setup ZMQ PUB socket -------------------------------------------------
 context = zmq.Context()
 socket  = context.socket(zmq.PUB)
-socket.setsockopt(zmq.SNDHWM, 1000)      # high-water mark
+socket.setsockopt(zmq.SNDHWM, 100)      # high-water mark
 socket.bind(f"tcp://*:{PUB_PORT}")
 
 # --- Build the payload ONCE ----------------------------------------------
@@ -28,7 +28,7 @@ sent_bytes = 0
 while time.time() - start_time < DURATION:
     try:
         # copy=False avoids an internal memcpy
-        socket.send(payload, flags=zmq.NOBLOCK, copy=False)
+        socket.send(payload, copy=False)
         sent_bytes += PAYLOAD_SIZE
     except zmq.Again:                    # PUB queue is full → short back-off
         time.sleep(0.0005)
