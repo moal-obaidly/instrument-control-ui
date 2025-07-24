@@ -99,11 +99,11 @@ def publish_buffer():
                         batches_sent+=1
                         time.sleep(0.0001)  # cpu safety
 
-                # else:
-                #     # Re-buffer the batch
-                #     for payload in reversed(batch):
-                #         buffered_data.appendleft(payload)
-                #     time.sleep(0.0001)  # back off a little
+                else:
+                    # Re-buffer the batch
+                    for payload in reversed(batch):
+                        buffered_data.appendleft(payload)
+                    time.sleep(0.0001)  # back off a little
 
             # elif buffered_data:
             #     payload = buffered_data.pop(0)
