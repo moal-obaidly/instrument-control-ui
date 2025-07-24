@@ -246,25 +246,32 @@ def on_connect(client, userdata, flags, rc):
 
 
     #check to see if buffer is empty. if not then send publish all that data
-    while len(buffered_data) > 0:
-        try:
+    if buffered_data:
+        print(f"Draining {len(buffered_data)} buffered samples...")
 
-            batch_size = min(100, len(buffered_data))
-            print(f"{len(buffered_data)} left to send")
-            # batch_size = 100
-            batch = [buffered_data.popleft() for i in range(batch_size)]
-            multi_payload = b''.join(batch)
-        except IndexError:
-            print("buffer emptied midbatch")
-            break
+    while len(buffered_data) > 0:
+        batch_size = min(500, len(buffered_data))  # send big batches
+        batch = [buffered_data.popleft() for _ in range(batch_size)]
+        multi_payload = b''.join(batch)
 
         if client.is_connected():
-            client.publish(topic, multi_payload,qos=1)
-            time.sleep(0.000001)  # prevent flooding
-        # payload = buffered_data.pop(0)
-        # client.publish(topic, payload)
-    print("Sent buffered data!")
+            result = client.publish(topic, multi_payload, qos=1)
+            if result.rc != 0:
+                print(f"Publish failed (rc={result.rc}) — rebuffering batch")
+                for payload in reversed(batch):
+                    buffered_data.appendleft(payload)
+                break  # stop flushing if there's a problem
+        else:
+            print("Disconnected while flushing.")
+            for payload in reversed(batch):
+                buffered_data.appendleft(payload)
+            break
 
+        #pause
+        time.sleep(0.001)
+
+    if not buffered_data:
+        print("Sent buffered data!")
 
 def on_disconnect(client, userdata, rc):
 
