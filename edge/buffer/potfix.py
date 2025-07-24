@@ -133,7 +133,7 @@ def publish_buffer():
 
                 if client.is_connected():
                     # client.publish(topic, payload)
-                    result = client.publish(topic, multi_payload,qos=1)
+                    result = client.publish(topic, multi_payload_stopped,qos=1)
                     if result.rc != 0:
                         # print(f"Publish failed (rc={result.rc}) — rebuffering single")
                         for payload in reversed(batch_stopped):
