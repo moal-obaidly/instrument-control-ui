@@ -94,16 +94,16 @@ def publish_buffer():
                         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
                         for payload in reversed(batch):
                             buffered_data.appendleft(payload)
-                        time.sleep(0.000001)  # cpu safety
+                        time.sleep(0.0001)  # cpu safety
                     else:
                         batches_sent+=1
-                        time.sleep(0.000001)  # cpu safety
+                        time.sleep(0.0001)  # cpu safety
 
                 else:
                     # Re-buffer the batch
                     for payload in reversed(batch):
                         buffered_data.appendleft(payload)
-                    time.sleep(0.000001)  # back off a little
+                    time.sleep(0.0001)  # back off a little
 
             # elif buffered_data:
             #     payload = buffered_data.pop(0)
