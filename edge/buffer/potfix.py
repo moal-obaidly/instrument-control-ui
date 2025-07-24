@@ -246,32 +246,32 @@ def on_connect(client, userdata, flags, rc):
 
 
     #check to see if buffer is empty. if not then send publish all that data
-    if buffered_data:
-        print(f"Draining {len(buffered_data)} buffered samples...")
+    # if buffered_data:
+    #     print(f"Draining {len(buffered_data)} buffered samples...")
 
-    while len(buffered_data) > 0:
-        batch_size = min(500, len(buffered_data))  # send big batches
-        batch = [buffered_data.popleft() for _ in range(batch_size)]
-        multi_payload = b''.join(batch)
+    # while len(buffered_data) > 0:
+    #     batch_size = min(500, len(buffered_data))  # send big batches
+    #     batch = [buffered_data.popleft() for _ in range(batch_size)]
+    #     multi_payload = b''.join(batch)
 
-        if client.is_connected():
-            result = client.publish(topic, multi_payload, qos=1)
-            if result.rc != 0:
-                print(f"Publish failed (rc={result.rc}) — rebuffering batch")
-                for payload in reversed(batch):
-                    buffered_data.appendleft(payload)
-                break  # stop flushing if there's a problem
-        else:
-            print("Disconnected while flushing.")
-            for payload in reversed(batch):
-                buffered_data.appendleft(payload)
-            break
+    #     if client.is_connected():
+    #         result = client.publish(topic, multi_payload, qos=1)
+    #         if result.rc != 0:
+    #             print(f"Publish failed (rc={result.rc}) — rebuffering batch")
+    #             for payload in reversed(batch):
+    #                 buffered_data.appendleft(payload)
+    #             break  # stop flushing if there's a problem
+    #     else:
+    #         print("Disconnected while flushing.")
+    #         for payload in reversed(batch):
+    #             buffered_data.appendleft(payload)
+    #         break
 
-        #pause
-        time.sleep(0.001)
+    #     #pause
+    #     time.sleep(0.001)
 
-    if not buffered_data:
-        print("Sent buffered data!")
+    # if not buffered_data:
+    #     print("Sent buffered data!")
 
 def on_disconnect(client, userdata, rc):
 
