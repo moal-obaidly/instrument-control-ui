@@ -58,7 +58,7 @@ def publish_buffer():
 
 
     global topic,batches_sent,singles_sent,running
-    batch_size = 100
+    batch_size = 2000
     
 
     while True:
