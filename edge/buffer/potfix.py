@@ -78,29 +78,29 @@ def publish_buffer():
         # else:
         #     time.sleep(0.001) 
 ##################################################################
-        if len(buffered_data) >= batch_size and running:
-            batch = [buffered_data.popleft() for _ in range(batch_size)]
-            multi_payload = b''.join(batch)
+            if len(buffered_data) >= batch_size and running:
+                batch = [buffered_data.popleft() for _ in range(batch_size)]
+                multi_payload = b''.join(batch)
 
-            success = False
-            while not success:
-                if client.is_connected():
-                    result = client.publish(topic, multi_payload, qos=1)
-                    if result.rc == 0:
-                        success = True
-                        batches_sent += 1
-                        time.sleep(0.0001)  
+                success = False
+                while not success:
+                    if client.is_connected():
+                        result = client.publish(topic, multi_payload, qos=1)
+                        if result.rc == 0:
+                            success = True
+                            batches_sent += 1
+                            time.sleep(0.0001)  
+                        else:
+                            print(f"Publish failed (rc={result.rc}) — retrying batch")
                     else:
-                        print(f"Publish failed (rc={result.rc}) — retrying batch")
-                else:
-                    print("Waiting for reconnection...")
+                        print("Waiting for reconnection...")
 
-                # If failed, rebuffer and pause slightly before retrying
-                if not success:
-                    
-                    for payload in reversed(batch):
-                        buffered_data.appendleft(payload)
-                    time.sleep(0.1)  
+                    # If failed, rebuffer and pause slightly before retrying
+                    if not success:
+                        
+                        for payload in reversed(batch):
+                            buffered_data.appendleft(payload)
+                        time.sleep(0.1)  
         
             # if len(buffered_data) >= batch_size and running:
             #     batch = [buffered_data.popleft() for i in range(batch_size)]
