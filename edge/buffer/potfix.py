@@ -124,29 +124,29 @@ def publish_buffer():
             #         buffered_data.insert(0, payload)
             #         time.sleep(0.01)
 
-            # elif buffered_data and running == False:
-            #     batch_size_stopped = 100
-            #     batch_stopped = [buffered_data.popleft() for i in range(batch_size_stopped)]
-            #     multi_payload_stopped = b''.join(batch_stopped)
+            elif buffered_data and running == False:
+                batch_size_stopped = min(100, len(buffered_data))
+                batch_stopped = [buffered_data.popleft() for i in range(batch_size_stopped)]
+                multi_payload_stopped = b''.join(batch_stopped)
                 
                 
 
-            #     if client.is_connected():
-            #         # client.publish(topic, payload)
-            #         result = client.publish(topic, multi_payload,qos=1)
-            #         if result.rc != 0:
-            #             # print(f"Publish failed (rc={result.rc}) — rebuffering single")
-            #             for payload in reversed(batch_stopped):
-            #                 buffered_data.appendleft(payload)
-            #             time.sleep(0.0001)  # cpu safety
-            #         else:
-            #             singles_sent+=1
-            #             time.sleep(0.0001) # cpu safety
+                if client.is_connected():
+                    # client.publish(topic, payload)
+                    result = client.publish(topic, multi_payload,qos=1)
+                    if result.rc != 0:
+                        # print(f"Publish failed (rc={result.rc}) — rebuffering single")
+                        for payload in reversed(batch_stopped):
+                            buffered_data.appendleft(payload)
+                        time.sleep(0.0001)  # cpu safety
+                    else:
+                        singles_sent+=1
+                        time.sleep(0.0001) # cpu safety
 
    
-            #     else:
-            #         buffered_data.insert(0, payload)
-            #         time.sleep(0.01)
+                else:
+                    buffered_data.insert(0, payload)
+                    time.sleep(0.01)
 
             else:
                 time.sleep(0.001)
