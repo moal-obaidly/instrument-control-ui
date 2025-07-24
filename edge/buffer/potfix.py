@@ -94,6 +94,12 @@ def publish_buffer():
                         print(f"Publish failed (rc={result.rc}) — rebuffering batch")
                         for payload in reversed(batch):
                             buffered_data.appendleft(payload)
+                        while not client.is_connected():
+                            print("Waiting for reconnection...")
+                            time.sleep(0.1)
+
+                            # DO NOT move on — let it retry the same batch on next loop
+                        continue
                         time.sleep(0.0001)  # cpu safety
                     else:
                         batches_sent+=1
