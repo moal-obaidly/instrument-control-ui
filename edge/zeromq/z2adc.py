@@ -39,6 +39,8 @@ sub_socket = context.socket(zmq.SUB)
 sub_socket.connect("tcp://192.168.1.66:5557")  # 36 for laptop, 82 for rpi 4, 66 for reterminal, 65 for reterminal ethernet, tailscale:100.113.46.57
 sub_socket.connect("tcp://192.168.1.36:5557")
 sub_socket.connect("tcp://192.168.1.62:5557")
+sub_socket.connect("tcp://100.113.46.57:5557")
+
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/control")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/slider")
 sub_socket.setsockopt_string(zmq.SUBSCRIBE, "experiment/rateslider")
