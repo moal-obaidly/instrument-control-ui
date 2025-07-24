@@ -77,39 +77,62 @@ def publish_buffer():
         #     time.sleep(0.0001)  
         # else:
         #     time.sleep(0.001) 
-    
+##################################################################
+        if len(buffered_data) >= batch_size and running:
+            batch = [buffered_data.popleft() for _ in range(batch_size)]
+            multi_payload = b''.join(batch)
 
-        
-            if len(buffered_data) >= batch_size and running:
-                batch = [buffered_data.popleft() for i in range(batch_size)]
-                multi_payload = b''.join(batch)
-
+            success = False
+            while not success:
                 if client.is_connected():
-                    # client.publish(topic, multi_payload,qos=1)
-                    # time.sleep(0.0001)  # prevent flooding
-
-
-                    result = client.publish(topic, multi_payload,qos=1)
-                    if result.rc != 0:
-                        print(f"Publish failed (rc={result.rc}) — rebuffering batch")
-                        for payload in reversed(batch):
-                            buffered_data.appendleft(payload)
-                        while not client.is_connected():
-                            print("Waiting for reconnection...")
-                            time.sleep(0.1)
-
-                            # DO NOT move on — let it retry the same batch on next loop
-                        continue
-                        time.sleep(0.0001)  # cpu safety
+                    result = client.publish(topic, multi_payload, qos=1)
+                    if result.rc == 0:
+                        success = True
+                        batches_sent += 1
+                        time.sleep(0.0001)  
                     else:
-                        batches_sent+=1
-                        time.sleep(0.0001)  # cpu safety
-
+                        print(f"Publish failed (rc={result.rc}) — retrying batch")
                 else:
-                    # Re-buffer the batch
+                    print("Waiting for reconnection...")
+
+                # If failed, rebuffer and pause slightly before retrying
+                if not success:
+                    
                     for payload in reversed(batch):
                         buffered_data.appendleft(payload)
-                    time.sleep(0.0001)  # back off a little
+                    time.sleep(0.1)  
+        
+            # if len(buffered_data) >= batch_size and running:
+            #     batch = [buffered_data.popleft() for i in range(batch_size)]
+            #     multi_payload = b''.join(batch)
+
+            #     if client.is_connected():
+            #         # client.publish(topic, multi_payload,qos=1)
+            #         # time.sleep(0.0001)  # prevent flooding
+
+
+            #         result = client.publish(topic, multi_payload,qos=1)
+            #         if result.rc != 0:
+            #             print(f"Publish failed (rc={result.rc}) — rebuffering batch")
+            #             for payload in reversed(batch):
+            #                 buffered_data.appendleft(payload)
+            #             while not client.is_connected():
+            #                 print("Waiting for reconnection...")
+            #                 time.sleep(0.1)
+
+            #                 # DO NOT move on — let it retry the same batch on next loop
+            #             continue
+            #             time.sleep(0.0001)  # cpu safety
+            #         else:
+            #             batches_sent+=1
+            #             time.sleep(0.0001)  # cpu safety
+
+            #     else:
+            #         # Re-buffer the batch
+            #         for payload in reversed(batch):
+            #             buffered_data.appendleft(payload)
+            #         time.sleep(0.0001)  # back off a little
+            ####################################################################################
 
             # elif buffered_data:
             #     payload = buffered_data.pop(0)
