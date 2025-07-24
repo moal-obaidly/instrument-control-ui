@@ -27,8 +27,8 @@ ser = serial.Serial('/dev/ttyAMA0', 3000000, timeout=0.00005)
 
 # publisher that sends data
 pub_socket = context.socket(zmq.PUB)
-pub_socket.connect("tcp://localhost:6000")  # connects to XSUB of the proxy old code was :
-  #pub_socket.bind("tcp://*:5556")
+#pub_socket.connect("tcp://localhost:6000")  # connects to XSUB of the proxy old code was :
+pub_socket.bind("tcp://*:5556")
 
 #publisher for rtt
 rtt_socket = context.socket(zmq.PUB)
