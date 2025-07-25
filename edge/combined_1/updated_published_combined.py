@@ -35,8 +35,9 @@ client = mqtt.Client()
 context = zmq.Context()
 zmq_pub = context.socket(zmq.PUB)
 zmq_pub.bind("tcp://*:5556")
-rtt_pub = context.socket(zmq.PUB)
-rtt_pub.bind("tcp://*:5558")
+#publisher for rtt
+rtt_socket = context.socket(zmq.PUB)
+rtt_socket.bind("tcp://*:5558") 
 
 
 # subscriber logic to get control from ui
@@ -59,15 +60,15 @@ def rtt():
     while running:
         ts = time.time()
         client.publish("experiment/rtt", ts)
-        rtt_pub.send_string(f"experiment/rtt {ts}")
+        rtt_socket.send_string(f"experiment/rtt {time.time()}")
 
         cpu = psutil.cpu_percent()
         ram = psutil.virtual_memory().percent
 
         client.publish("experiment/system/cpu", str(cpu))
         client.publish("experiment/system/ram", str(ram))
-        rtt_pub.send_string(f"experiment/system/cpu {cpu}")
-        rtt_pub.send_string(f"experiment/system/ram {ram}")
+        rtt_socket.send_string(f"experiment/system/cpu {cpu}")
+        rtt_socket.send_string(f"experiment/system/ram {ram}")
         time.sleep(1)
 
 def publish_buffer():
