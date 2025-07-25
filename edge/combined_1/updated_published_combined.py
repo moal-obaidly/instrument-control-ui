@@ -162,6 +162,7 @@ def on_message(client, userdata, msg):
                 signal_thread.start()
         elif command == "0":
             stop_signal()
+            zmq_pub.send_multipart([b"experiment/stopped", str(checksum).encode()])
 
     elif msg.topic == "experiment/slider":
         try: freq = float(command)
