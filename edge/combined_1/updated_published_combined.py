@@ -149,6 +149,7 @@ def stop_signal():
     global running
     running = False
     print("Signal stopped.")
+    time.sleep(0.5)
     print(f"Count: {count}, Batches: {batches_sent}, Singles: {singles_sent}, Checksum: {checksum}")
     client.publish("experiment/checksum", checksum)
     zmq_pub.send_multipart([b"experiment/checksum", str(checksum).encode()])
@@ -194,7 +195,7 @@ def on_message(client, userdata, msg):
             orig = float(command)
             rtt_ms = (time.time() - orig) * 1000
             client.publish("experiment/rtt/display", rtt_ms)
-            rtt_pub.send_string(f"experiment/rtt/display {rtt_ms}")
+            rtt_socket.send_string(f"experiment/rtt/display {rtt_ms}")
             print(f"RTT: {rtt_ms:.2f} ms")
         except:
             print("Bad RTT response")
