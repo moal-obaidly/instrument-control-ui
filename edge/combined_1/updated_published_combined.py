@@ -195,7 +195,7 @@ def on_message(client, userdata, msg):
             orig = float(command)
             rtt_ms = (time.time() - orig) * 1000
             client.publish("experiment/rtt/display", rtt_ms)
-            rtt_socket.send_string(f"experiment/rtt/display {rtt_ms}")
+            
             print(f"RTT: {rtt_ms:.2f} ms")
         except:
             print("Bad RTT response")
@@ -248,7 +248,7 @@ def ui_controls():
                     
                     orig_time = float(payload)
                     rtt_ms = (time.time() - orig_time) * 1000
-                    #rtt_socket.send_string(f"experiment/rtt/display {rtt_ms}")
+                    rtt_socket.send_string(f"experiment/rtt/display {rtt_ms}")
                     print(f"RTT: {rtt_ms:.2f} ms")
                 except ValueError:
                     print("Invalid RTT response value:", payload)
