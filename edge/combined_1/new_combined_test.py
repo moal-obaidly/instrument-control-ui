@@ -69,7 +69,7 @@ def rtt():
 
 def publish_buffer():
     global batches_sent, singles_sent
-    batch_size = 100
+    batch_size = 1
 
     while True:
         if running and len(buffered_data) >= batch_size:
@@ -123,7 +123,7 @@ def start_signal():
     if buffer_thread is None or not buffer_thread.is_alive():
         threading.Thread(target=publish_buffer, daemon=True).start()
 
-    BATCH_SIZE = 512
+    BATCH_SIZE = 1
     while running:
         batch = []
         for _ in range(BATCH_SIZE):
