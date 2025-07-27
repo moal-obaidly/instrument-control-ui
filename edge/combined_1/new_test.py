@@ -183,10 +183,44 @@ def on_connect(client, userdata, flags, rc):
         client.subscribe(topic)
 
 def on_message(client, userdata, msg):
-    try:
-        ui_controls()  # reuse the same logic
-    except:
-        pass
+    global freq, rate, seq_num, checksum, count, signal_thread, batches_sent, singles_sent, buffered_data
+
+    command = msg.payload.decode()
+    print(f"MQTT msg on {msg.topic}: {command}")
+
+    if msg.topic == "experiment/control":
+        if command == "1":
+            if signal_thread is None or not signal_thread.is_alive():
+                signal_thread = threading.Thread(target=start_signal, daemon=True)
+                signal_thread.start()
+        elif command == "0":
+            stop_signal()
+
+    elif msg.topic == "experiment/slider":
+        try:
+            freq = float(command)
+        except:
+            print("Invalid freq")
+
+    elif msg.topic in ["experiment/rateslider", "experiment/rate"]:
+        try:
+            rate = float(command)
+        except:
+            print("Invalid rate")
+
+    elif msg.topic == "experiment/rtt/response":
+        try:
+            rtt_val = (time.time() - float(command)) * 1000
+            client.publish("experiment/rtt/display", rtt_val)
+            print(f"RTT: {rtt_val:.2f} ms")
+        except:
+            print("Bad RTT")
+
+    elif msg.topic == "experiment/reset" and command == "1":
+        checksum = count = singles_sent = batches_sent = 0
+        seq_num = 1
+        buffered_data.clear()
+
 
 client.on_connect = on_connect
 client.on_message = on_message
