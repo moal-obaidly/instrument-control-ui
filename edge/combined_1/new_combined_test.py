@@ -92,7 +92,7 @@ def publish_buffer():
                 if not success:
                     for p in reversed(batch):
                         buffered_data.appendleft(p)
-                    time.sleep(0.1)
+                    time.sleep(0.000001)
 
         elif not running and buffered_data:
             small_batch = [buffered_data.popleft() for _ in range(min(100, len(buffered_data)))]
@@ -134,7 +134,7 @@ def start_signal():
             seq_num += 1
         buffered_data.append(b''.join(batch))
         count += BATCH_SIZE
-        time.sleep(0.0001)
+        #time.sleep(0.0001)
 
 def stop_signal():
     global running
