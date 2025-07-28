@@ -122,8 +122,8 @@ def zmq_publish_buffer():
 
     while True:
                    
-            if len(zmq_publish_buffer) >= batch_size and running:
-                batch = [zmq_publish_buffer.popleft() for i in range(batch_size)]
+            if len(buffered_data_zmq) >= batch_size and running:
+                batch = [buffered_data_zmq.popleft() for i in range(batch_size)]
                 multi_payload = b''.join(batch)
                 result = pub_socket.send_multipart([b"experiment/data", multi_payload])             
                 batches_sent+=1
@@ -136,8 +136,8 @@ def zmq_publish_buffer():
                 #     time.sleep(0.01)  # back off a little
 
 
-            elif zmq_publish_buffer and running == False:
-                payload = zmq_publish_buffer.popleft()
+            elif buffered_data_zmq and running == False:
+                payload = buffered_data_zmq.popleft()
 
                 
                     
