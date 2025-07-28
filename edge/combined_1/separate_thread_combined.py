@@ -32,8 +32,8 @@ client = mqtt.Client()
 
 # ZeroMQ setup
 context = zmq.Context()
-zmq_pub = context.socket(zmq.PUB)
-zmq_pub.bind("tcp://*:5556")
+pub_socket = context.socket(zmq.PUB)
+pub_socket.bind("tcp://*:5556")
 #publisher for rtt
 rtt_socket = context.socket(zmq.PUB)
 rtt_socket.bind("tcp://*:5558") 
@@ -116,15 +116,43 @@ def mqtt_publish_buffer():
             time.sleep(0.001)
 
 def zmq_publish_buffer():
+    global topic,batches_sent,singles_sent,running
+    batch_size = 100
+    
+
     while True:
-        if running and buffered_data_zmq:
-            payload = buffered_data_zmq.popleft()
-            zmq_pub.send_multipart([b"experiment/data", payload])
-        elif not running and buffered_data_zmq:
-            payload = buffered_data_zmq.popleft()
-            zmq_pub.send_multipart([b"experiment/data", payload])
-        else:
-            time.sleep(0.0001)
+                   
+            if len(buffered_data) >= batch_size and running:
+                batch = [buffered_data.popleft() for i in range(batch_size)]
+                multi_payload = b''.join(batch)
+                result = pub_socket.send_multipart([b"experiment/data", multi_payload])             
+                batches_sent+=1
+                time.sleep(0.0001)  # cpu safety
+
+                # else:
+                #     # Re-buffer the batch
+                #     for payload in reversed(batch):
+                #         buffered_data.appendleft(payload)
+                #     time.sleep(0.01)  # back off a little
+
+
+            elif buffered_data and running == False:
+                payload = buffered_data.popleft()
+
+                
+                    
+                result = pub_socket.send_multipart([b"experiment/data", payload])
+                   
+                singles_sent+=1
+                time.sleep(0.0001) # cpu safety
+
+   
+                # else:
+                #     buffered_data.insert(0, payload)
+                #     time.sleep(0.01)
+
+            else:
+                time.sleep(0.001)
 
 
 
@@ -138,7 +166,7 @@ def start_signal():
             threading.Thread(target=mqtt_publish_buffer, daemon=True).start()
             threading.Thread(target=zmq_publish_buffer, daemon=True).start()
 
-    BATCH_SIZE = 100
+    BATCH_SIZE = 1
     while running:
         batch = []
         for _ in range(BATCH_SIZE):
@@ -161,7 +189,7 @@ def stop_signal():
     time.sleep(0.5)
     print(f"Count: {count}, Batches: {batches_sent}, Singles: {singles_sent}, Checksum: {checksum}")
     client.publish("experiment/checksum", checksum)
-    zmq_pub.send_multipart([b"experiment/checksum", str(checksum).encode()])
+    pub_socket.send_multipart([b"experiment/checksum", str(checksum).encode()])
 
 def on_connect(client, userdata, flags, rc):
     print("Connected:", rc)
@@ -188,7 +216,7 @@ def on_message(client, userdata, msg):
                 signal_thread.start()
         elif command == "0":
             stop_signal()
-            zmq_pub.send_multipart([b"experiment/stopped", str(checksum).encode()])
+            pub_socket.send_multipart([b"experiment/stopped", str(checksum).encode()])
 
     elif msg.topic == "experiment/slider":
         try: freq = float(command)
