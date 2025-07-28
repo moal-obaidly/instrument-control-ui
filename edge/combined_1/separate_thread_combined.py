@@ -71,7 +71,7 @@ def rtt():
 
 def mqtt_publish_buffer():
     global batches_sent, singles_sent
-    batch_size = 1
+    batch_size = 100
 
     while True:
         if running and len(buffered_data_mqtt) >= batch_size:
@@ -138,7 +138,7 @@ def start_signal():
             threading.Thread(target=mqtt_publish_buffer, daemon=True).start()
             threading.Thread(target=zmq_publish_buffer, daemon=True).start()
 
-    BATCH_SIZE = 1
+    BATCH_SIZE = 100
     while running:
         batch = []
         for _ in range(BATCH_SIZE):
