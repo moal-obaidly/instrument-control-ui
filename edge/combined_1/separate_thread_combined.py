@@ -85,7 +85,7 @@ def mqtt_publish_buffer():
                     if res.rc == 0:
                         success = True
                         batches_sent += 1
-                        time.sleep(0.0001)
+                        #time.sleep(0.0001)
                     else:
                         print("MQTT batch failed, retrying...")
                 else:
@@ -127,7 +127,7 @@ def zmq_publish_buffer():
                 multi_payload = b''.join(batch)
                 result = pub_socket.send_multipart([b"experiment/data", multi_payload])             
                 batches_sent+=1
-                time.sleep(0.0001)  # cpu safety
+                #time.sleep(0.0001)  # cpu safety
 
                 # else:
                 #     # Re-buffer the batch
@@ -180,7 +180,7 @@ def start_signal():
         buffered_data_zmq.append(joined)
 
         count += BATCH_SIZE
-        time.sleep(0.0001)
+        #time.sleep(0.0001)
 
 def stop_signal():
     global running
