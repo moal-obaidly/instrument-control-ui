@@ -152,7 +152,7 @@ def start_signal():
         buffered_data_zmq.append(joined)
 
         count += BATCH_SIZE
-        #time.sleep(0.0001)
+        time.sleep(0.0001)
 
 def stop_signal():
     global running
