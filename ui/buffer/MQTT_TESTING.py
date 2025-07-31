@@ -60,7 +60,7 @@ class MQTTClient:
         self.received_seqs = set()
 
         #for sample rate
-        self.old_time = time.time
+        self.old_time = time.time()
         self.sample_rate= 0
 
         #for saving to csv
