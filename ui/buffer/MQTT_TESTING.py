@@ -14,6 +14,9 @@ matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt
 import psutil
 import qdarkstyle
+import re
+from pathlib import Path
+
 
 
 # experiment_file = f"{current_working_directory}/Experiments/Experiment12.csv"
@@ -24,16 +27,18 @@ count = 0
 sample_count = 0
 
 
-
+def get_next_experiment_number(folder):
+    folder_path = Path(folder)
+    files = list(folder_path.glob("Experiment*.csv"))
+    nums = []
+    for f in files:
+        match = re.match(r"Experiment(\d+)\.csv", f.name)
+        if match:
+            nums.append(int(match.group(1)))
+    return max(nums, default=0) + 1
 current_working_directory = os.getcwd()
 experiments_folder = f"{current_working_directory}/Experiments"
-past_experiments = 1
-# Count the number of files in the *experiments* directory
-for path in os.listdir(experiments_folder):
-    if os.path.isfile(os.path.join(experiments_folder,path)):
-        past_experiments+=1
 
-print(past_experiments)
 
 
 # MQTT Client Setup
@@ -76,6 +81,7 @@ class MQTTClient:
         self.bytes_received = 0
         self.last_log_time = time.time()
         self.throughput_log = []
+        self.throughput_calculated = False
 
 
 
@@ -131,12 +137,12 @@ class MQTTClient:
                         self.received_seqs.add(seq)
                         if self.old_seq != 0:
                             if seq < self.old_seq:
-                                print(f" Out-of-order packet detected: current seq = {seq}, previous = {self.old_seq}")
+                                print(f" Out of order packet detec: current seq = {seq}, previous = {self.old_seq}")
                                 self.ordering = False
                             elif seq > self.old_seq + 1:
                                 missed = seq - self.old_seq - 1
                                 print(f"Missed {missed} packets (dropped between {self.old_seq} and {seq})")
-                                self.ordering = False
+                                # self.ordering = False
                            
                         self.old_seq = seq
                         self.checksum += sum(payload[i:i+12])
@@ -185,7 +191,7 @@ class MQTTClient:
 
                     # else:
                     #     print(f"Duplicate or old packet seq={seq} ignored")
-                    
+
                 #print(f"Value at time{timerec}= {value}")
 
                 #latency = (time.time() - sent_time) * 1000
@@ -417,7 +423,9 @@ class MainWindow(QWidget):
         self.recording_led.setFixedSize(20, 20)
         self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
 
-        self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past  experiments: {past_experiments}")
+        latest = get_next_experiment_number(experiments_folder) - 1
+        self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past experiments: {latest}")
+
 
 
         self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.mqtt_client.rtt)}ms       CPU:{self.mqtt_client.publisher_cpu_usage}%        Ram:{self.mqtt_client.publisher_ram_usage}%")
@@ -490,8 +498,9 @@ class MainWindow(QWidget):
         rate_layout.addWidget(self.sampling_rate_label)
         # rate_layout.addWidget(self.low_sample_rate_btn)
         # rate_layout.addWidget(self.med_sample_rate_btn)
-        rate_layout.addWidget(QtWidgets.QLabel("Select experiment:"))
-        rate_layout.addWidget(self.experiment_selector)
+
+        # rate_layout.addWidget(QtWidgets.QLabel("Select experiment:"))
+        # rate_layout.addWidget(self.experiment_selector)
 
         rate_layout.addWidget(self.high_sample_rate_btn)
         rate_layout.addWidget(self.toggle_screen_btn)
@@ -577,6 +586,17 @@ class MainWindow(QWidget):
         tput = self.mqtt_client.throughput_log[-1][1] / 1000 if self.mqtt_client.throughput_log else 0
         self.throughput_label.setText(f"Throughput: {tput:.2f} KB/s")
         self.rtt_label.setText(f"RTT:{self.mqtt_client.rtt:.2f}ms       CPU:{self.mqtt_client.publisher_cpu_usage}%        Ram:{self.mqtt_client.publisher_ram_usage}% ")
+
+        now = time.time()
+        if (
+            now - self.mqtt_client.current_time > 3
+            and not self.mqtt_client.throughput_calculated
+            and len(self.mqtt_client.throughput_log) > 1
+        ):
+            all_tputs = [t[1] for t in self.mqtt_client.throughput_log[1:]]
+            avg_tput = sum(all_tputs) / len(all_tputs)
+            print(f"\n[Auto-Detected Stop] Average throughput (excluding first): {avg_tput / 1000:.2f} KB/s")
+            self.mqtt_client.throughput_calculated = True
         
         
         #print(f"Current RTT in GUI update: {self.mqtt_client.rtt}")
@@ -608,6 +628,10 @@ class MainWindow(QWidget):
         self.mqtt_client.old_time = time.time()
 
 
+        
+
+
+
     def stop_experiment(self):
         global count
         self.mqtt_client.client.publish("experiment/control", "0",qos=1)
@@ -626,6 +650,11 @@ class MainWindow(QWidget):
             f.write("timestamp,throughput_bps\n")
             for ts, tput in self.mqtt_client.throughput_log:
                 f.write(f"{ts},{tput}\n")
+        all_tputs = [t[1] for t in self.mqtt_client.throughput_log[1:]]
+        if len(all_tputs) > 1:
+
+            avg_tput = sum(all_tputs) / len(all_tputs)
+            print(f"\nAverage throughput (excluding first): {avg_tput / 1000:.2f} KB/s")
 
 
 # Different possible simulated sampling rates
@@ -641,14 +670,16 @@ class MainWindow(QWidget):
 
     def high_sample_rate(self):
         # self.mqtt_client.client.publish("experiment/rate", "10000")
-        experiment_file = f"{current_working_directory}/Experiments/Experiment{past_experiments}.csv"
+        last_exp_num = get_next_experiment_number(experiments_folder) - 1
+        experiment_file = f"{current_working_directory}/Experiments/Experiment{last_exp_num}.csv"
+
         plot_experiment(experiment_file)
 
     
     def start_record(self): 
-        global record, csv_status,past_experiments
+        global record, csv_status, past_experiments
         record = 1
-        past_experiments+=1
+        past_experiments = get_next_experiment_number(experiments_folder)  
         if csv_status == 1:
             self.recording_label.setText("Recording")
             self.set_recording_led(record)

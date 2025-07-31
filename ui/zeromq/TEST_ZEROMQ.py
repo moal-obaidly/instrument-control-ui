@@ -17,6 +17,8 @@ import psutil
 
 from collections import deque
 import sys
+import re
+from pathlib import Path
 
 #globals
 record = 0
@@ -25,15 +27,18 @@ count = 0
 sample_count=0
 
 ####################################################################################
+def get_next_experiment_number(folder):
+    folder_path = Path(folder)
+    files = list(folder_path.glob("Experiment*.csv"))
+    nums = []
+    for f in files:
+        match = re.match(r"Experiment(\d+)\.csv", f.name)
+        if match:
+            nums.append(int(match.group(1)))
+    return max(nums, default=0) + 1
 current_working_directory = os.getcwd()
 experiments_folder = f"{current_working_directory}/Experiments"
-past_experiments = 0
-# Count the number of files in the *experiments* directory
-for path in os.listdir(experiments_folder):
-    if os.path.isfile(os.path.join(experiments_folder,path)):
-        past_experiments+=1
 
-print(past_experiments)
 
 
 #############################################################################
@@ -54,6 +59,7 @@ class zmq_Subscriber:
         self.received_seqs = set()
 
         self.current_time = 0
+        self.stop_time_combined = 0
 
         #for sample rate
         self.old_time = time.time()
@@ -66,6 +72,7 @@ class zmq_Subscriber:
         self.bytes_received = 0
         self.last_log_time = time.time()
         self.throughput_log = []
+        self.throughput_calculated = False
 
 
         self.context = zmq.Context()
@@ -143,6 +150,15 @@ class zmq_Subscriber:
                             print(payload)
                         except Exception as e:
                             print("Bad message:", payload, "| Error:", e)
+
+                    elif topic == b"experiment/stopped":
+                        try:
+                            self.stop_time_combined = time.time()
+                            
+                            print(payload)
+                        except Exception as e:
+                            print("Bad message:", payload, "| Error:", e)
+
 
                     
                                 
@@ -225,10 +241,10 @@ class MainWindow(QWidget):
         # self.poller = zmq.Poller()
         # self.poller.register(self.socket, zmq.POLLIN)
 
-        self.zmq_sub_client = zmq_Subscriber("tcp://192.168.1.34:5556","experiment/")#34 for rpi5, 33 for rpi ethernet, 82 for pi4 # tailscale: 100.113.46.57 #old dns:5556 #new: 6001
+        self.zmq_sub_client = zmq_Subscriber("tcp://100.113.46.57:5556","experiment/")#34 for rpi5, 33 for rpi ethernet, 82 for pi4 # tailscale: 100.113.46.57 #old dns:5556 #new: 6001
         self.zmq_pub_client = zmq_Publisher()
 
-        self.rtt_client = zmq_Subscriber("tcp://192.168.1.34:5558","")
+        self.rtt_client = zmq_Subscriber("tcp://100.113.46.57:5558","")
 
 
         self.data = deque(maxlen=1000)
@@ -308,7 +324,8 @@ class MainWindow(QWidget):
         self.recording_led.setFixedSize(20, 20)
         self.recording_led.setStyleSheet("background-color: grey; border-radius: 10px;")
 
-        self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past  experiments: {past_experiments}")
+        latest = get_next_experiment_number(experiments_folder) - 1
+        self.number_of_experiments_label = QtWidgets.QLabel(f"Number of past experiments: {latest}")
 
         self.rtt_label = QtWidgets.QLabel(f"RTT:{str(self.rtt_client.rtt)}ms")
 
@@ -486,6 +503,17 @@ class MainWindow(QWidget):
 
         tput = self.zmq_sub_client.throughput_log[-1][1] / 1000 if self.zmq_sub_client.throughput_log else 0
         self.throughput_label.setText(f"Throughput: {tput:.2f} KB/s")
+        now = time.time()
+        if (
+            now - self.zmq_sub_client.current_time > 3
+            and not self.zmq_sub_client.throughput_calculated
+            and len(self.zmq_sub_client.throughput_log) > 1
+        ):
+            all_tputs = [t[1] for t in self.zmq_sub_client.throughput_log[1:]]
+            avg_tput = sum(all_tputs) / len(all_tputs)
+            print(f"\n[Auto-Detected Stop] Average throughput (excluding first): {avg_tput / 1000:.2f} KB/s")
+            self.throughput_label.setText(f"Avg Throughput: {avg_tput / 1000:.2f} KB/s")
+            self.zmq_sub_client.throughput_calculated = True
 
 
         
@@ -557,13 +585,14 @@ class MainWindow(QWidget):
 
     def high_sample_rate(self):
         # self.zmq_pub_client.socket.send_string("experiment/rate 10000")
-        experiment_file = f"{current_working_directory}/Experiments/Experiment{past_experiments}.csv"
+        last_exp_num = get_next_experiment_number(experiments_folder) - 1
+        experiment_file = f"{current_working_directory}/Experiments/Experiment{last_exp_num}.csv"
         plot_experiment(experiment_file)
     
     def start_record(self): 
-        global record, csv_status,past_experiments
+        global record, csv_status, past_experiments
         record = 1
-        past_experiments+=1
+        past_experiments = get_next_experiment_number(experiments_folder)  
         if csv_status == 1:
             self.recording_label.setText("Recording")
             self.set_recording_led(record)
@@ -588,7 +617,11 @@ class MainWindow(QWidget):
         index = self.layout_stack.currentIndex()
         new_index = (index + 1) % self.layout_stack.count()
         self.layout_stack.setCurrentIndex(new_index)
-        print(f"delay:{self.zmq_sub_client.current_time-self.stop_time}")
+        if self.zmq_sub_client.stop_time_combined == 0:
+        
+            print(f"delay:{self.zmq_sub_client.current_time-self.stop_time}")
+        else:
+            print(f"delay:{self.zmq_sub_client.current_time-self.zmq_sub_client.stop_time_combined}")
 
     def toggle_screen(self):
         global screen_size
