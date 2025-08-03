@@ -8,15 +8,15 @@
 #include <time.h>
 #include "MQTTClient.h"
 
-#define ADDRESS     "tcp://100.106.113.72:1883"
-#define CLIENTID    "C_Publisher"
-#define TOPIC       "experiment/data"
-#define CONTROL     "experiment/control"
-#define CHECKSUM_TOPIC "experiment/checksum"
-#define QOS         1
-#define TIMEOUT     10000L
+#define ADDRESS         "tcp://100.106.113.72:1883"
+#define CLIENTID        "C_Publisher"
+#define TOPIC           "experiment/data"
+#define CONTROL         "experiment/control"
+#define CHECKSUM_TOPIC  "experiment/checksum"
+#define QOS             1
+#define TIMEOUT         10000L
 
-#define BATCH_SIZE 512000
+#define BATCH_SIZE      512
 
 volatile bool running = false;
 uint32_t seq_num = 1;
@@ -27,34 +27,40 @@ MQTTClient client;
 
 void* signal_loop(void* arg) {
     while (running) {
-        uint8_t batch[BATCH_SIZE * 12];
+        size_t total_bytes = BATCH_SIZE * 12;
+        uint8_t* batch = malloc(total_bytes);
+        if (!batch) {
+            fprintf(stderr, "Memory allocation failed\n");
+            break;
+        }
+
         for (int i = 0; i < BATCH_SIZE; i++) {
             double adc_value = 123.456;
             memcpy(&batch[i * 12], &adc_value, sizeof(double));
             memcpy(&batch[i * 12 + 8], &seq_num, sizeof(uint32_t));
             for (int j = 0; j < 12; j++) checksum += batch[i * 12 + j];
             seq_num++;
+            count++;
         }
 
         MQTTClient_message pubmsg = MQTTClient_message_initializer;
         pubmsg.payload = batch;
-        pubmsg.payloadlen = sizeof(batch);
+        pubmsg.payloadlen = total_bytes;
         pubmsg.qos = QOS;
         pubmsg.retained = 0;
 
         MQTTClient_deliveryToken token;
         int rc = MQTTClient_publishMessage(client, TOPIC, &pubmsg, &token);
-        if (rc != MQTTCLIENT_SUCCESS) {
-            printf("Failed to publish message, rc=%d\n", rc);
-        } else {
+        if (rc == MQTTCLIENT_SUCCESS) {
             MQTTClient_waitForCompletion(client, token, TIMEOUT);
-            count += BATCH_SIZE;
+        } else {
+            fprintf(stderr, "Failed to publish message, rc=%d\n", rc);
         }
 
-        usleep(100);  // ~10kHz rate
+        free(batch);  // clean up
     }
 
-    // On stop, send checksum
+    // Send final checksum
     char msg[64];
     snprintf(msg, sizeof(msg), "%llu", (unsigned long long)checksum);
     MQTTClient_message cmsg = MQTTClient_message_initializer;
@@ -102,5 +108,5 @@ int main(int argc, char* argv[]) {
 
     printf("Connected to broker\n");
 
-    while (1) sleep(1);  // Keep alive
+    while (1) sleep(1);
 }
